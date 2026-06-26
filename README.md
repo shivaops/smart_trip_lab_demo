@@ -43,13 +43,11 @@ After the project works successfully, you can do your own R&D and make changes a
 After downloading the project, the main folders are:
 
 ```text
-smart_trip_lab_demo_v1
+smart_trip_lab_demo
 │
-├── smart_trip
-│   └── smart_trip_full_db_dump
+├── smart_trip   
 │
-└── ars_api
-    └── ars_fill_flight_inventory_data.sql
+└── ars_api    
 ```
 
 ---
@@ -145,7 +143,7 @@ git clone https://github.com/shivaops/smart_trip_lab_demo.git
 Go inside the project folder:
 
 ```cmd
-cd smart_trip_lab_demo_v1
+cd smart_trip_lab_demo
 ```
 
 If your downloaded folder name is different, go inside your actual project folder.
@@ -153,7 +151,7 @@ If your downloaded folder name is different, go inside your actual project folde
 Example:
 
 ```cmd
-cd smart_trip_lab_demo_v1
+cd smart_trip_lab_demo
 ```
 
 ---
@@ -417,7 +415,7 @@ Open a **new Command Prompt**.
 Go to the project folder:
 
 ```cmd
-cd C:\smart_trip_lab_demo_v1
+cd C:\smart_trip_lab_demo
 ```
 
 If your folder name is different, use your actual project folder.
@@ -481,7 +479,7 @@ Open a **second new Command Prompt**.
 Go to the project folder:
 
 ```cmd
-cd C:\smart_trip_lab_demo_v1
+cd C:\smart_trip_lab_demo
 ```
 
 If your folder name is different, use your actual project folder.
@@ -552,7 +550,7 @@ If the password does not work, reset it.
 Open Command Prompt:
 
 ```cmd
-cd C:\smart_trip_lab_demo_v1\smart_trip
+cd C:\smart_trip_lab_demo\smart_trip
 ```
 
 Activate the virtual environment:
@@ -718,7 +716,7 @@ Provider base_url is http://bookmyflight.local:8002
 Reset password:
 
 ```cmd
-cd C:\smart_trip_lab_demo_v1\smart_trip
+cd C:\smart_trip_lab_demo\smart_trip
 .venv\Scripts\activate
 python scripts\set_password.py username NewPassword123
 ```
