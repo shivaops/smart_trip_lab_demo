@@ -21,11 +21,10 @@ but developer review, testing, correction,
 and improvement are still required.
 ```
 
-For the complete Smart Trip explanation and demo flow, please watch the full playlist on my YouTube channel: **ShivaOps**
+```markdown
+For the complete Smart Trip explanation and demo flow, please watch the full playlist on my YouTube channel:
 
-```text
-https://www.youtube.com/playlist?list=PLYkaOC9kXnifZLmJb9NehgmZYqmCEaiQ6
-```
+🎥 [Watch Full Smart Trip Playlist on ShivaOps](https://www.youtube.com/playlist?list=PLYkaOC9kXnifZLmJb9NehgmZYqmCEaiQ6)
 
 ---
 
@@ -769,8 +768,8 @@ Use it only for learning, practice, and local demo testing.
 
 ## More Details
 
-For full Smart Trip explanation and demo flow, please watch the ShivaOps YouTube channel.
+```markdown
+For full Smart Trip explanation and demo flow, please watch:
 
-```text
-https://www.youtube.com/playlist?list=PLYkaOC9kXnifZLmJb9NehgmZYqmCEaiQ6
+🎥 [ShivaOps Smart Trip YouTube Playlist](https://www.youtube.com/playlist?list=PLYkaOC9kXnifZLmJb9NehgmZYqmCEaiQ6)
 ```
