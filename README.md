@@ -21,7 +21,7 @@ but developer review, testing, correction,
 and improvement are still required.
 ```
 
-```markdown
+
 For the complete Smart Trip explanation and demo flow, please watch the full playlist on my YouTube channel:
 
 🎥 [Watch Full Smart Trip Playlist on ShivaOps](https://www.youtube.com/playlist?list=PLYkaOC9kXnifZLmJb9NehgmZYqmCEaiQ6)
@@ -768,8 +768,8 @@ Use it only for learning, practice, and local demo testing.
 
 ## More Details
 
-```markdown
+
 For full Smart Trip explanation and demo flow, please watch:
 
 🎥 [ShivaOps Smart Trip YouTube Playlist](https://www.youtube.com/playlist?list=PLYkaOC9kXnifZLmJb9NehgmZYqmCEaiQ6)
-```
+
