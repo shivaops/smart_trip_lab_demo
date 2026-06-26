@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{#
+  preferences.html
+  Variables:
+  - current_user: from FastAPI (logged-in user dict)
+  - pref: preference row dict OR None if not created yet
+#}
+
+{% block content %}
+
+<div class="page">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-title">{{ title }}</div>
+      <div class="brand-subtitle">User Preferences</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="user-chip">
+        Signed in as <b>{{ current_user.first_name }} {{ current_user.last_name }}</b>
+      </div>
+      <a class="btn btn-ghost" href="/profile">Back</a>
+      <a class="btn btn-ghost" href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Booking Defaults</div>
+
+    <form method="post" action="/profile/preferences">
+      <!--
+        When Save is clicked:
+        - Browser sends POST /profile/preferences
+        - FastAPI route: profile.py -> preferences_save()
+        - request.form() reads all <input name="..."> keys below
+      -->
+
+      <div class="grid2">
+        <div class="field">
+          <label>Preferred Currency (3 letters)</label>
+          <input
+            type="text"
+            name="preferred_currency"
+            value="{{ pref.preferred_currency if pref else 'INR' }}"
+            maxlength="3"
+            placeholder="INR"
+            required
+          >
+          {# value comes from pref dict OR fallback 'INR' #}
+        </div>
+
+        <div class="field">
+          <label>Preferred Language</label>
+          <input
+            type="text"
+            name="preferred_language"
+            value="{{ pref.preferred_language if pref else 'en' }}"
+            placeholder="en"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label>Seat Preference</label>
+          <select name="seat_preference">
+            {% set seat_val = (pref.seat_preference if pref else 'Any') %}
+            {% for opt in ['Aisle','Window','Any'] %}
+              <option value="{{ opt }}" {% if seat_val == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Meal Preference</label>
+          <select name="meal_preference">
+            {% set meal_val = (pref.meal_preference if pref else 'Standard') %}
+            {% for opt in ['Standard','Vegetarian','Vegan','Halal','Kosher','Diabetic'] %}
+              <option value="{{ opt }}" {% if meal_val == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="checks">
+        <label class="check">
+          <input type="checkbox" name="notify_email" {% if pref and pref.notify_email == 1 %}checked{% endif %}>
+          Email Notifications
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="notify_sms" {% if pref and pref.notify_sms == 1 %}checked{% endif %}>
+          SMS Notifications
+        </label>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn btn-primary" type="submit">Save Preferences</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

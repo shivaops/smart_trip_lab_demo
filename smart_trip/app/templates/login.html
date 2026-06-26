@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{# ------------------------------------------------------------
+  login.html
+  - Extends base.html layout.
+  - Everything visible must be inside the same block name
+    that base.html defines (we use: block content).
+------------------------------------------------------------- #}
+
+{% block content %}
+
+<h1>{{ title }}</h1>
+
+{# 
+  {{ title }} comes from Python (FastAPI route):
+  - app/routers/auth.py
+  - function: login_page()
+  - returns TemplateResponse("login.html", {"title": "Login", ...})
+#}
+
+{% if error %}
+  {# 
+    This IF block runs only when Python sends a non-empty `error`.
+    - Python sets error=None on first load
+    - Python sets error="..." when login fails
+  #}
+  <div class="error">{{ error }}</div>
+
+  {# 
+    {{ error }} prints the error message string.
+  #}
+{% endif %}
+
+<form method="post" action="/login">
+  <!--
+    HTML form rules (pure HTML comment, no Jinja tags mentioned here):
+    - method="post" sends form data as HTTP POST
+    - action="/login" sends it to FastAPI POST /login route
+  -->
+
+  <div class="field">
+    <label>Username</label>
+    <input
+      type="text"
+      name="username"
+      placeholder="Example: shiva"
+      required
+    >
+    <!--
+      name="username" is the form key.
+      FastAPI reads it in Python using: form.get("username")
+    -->
+  </div>
+
+  <div class="field">
+    <label>Password</label>
+    <input
+      type="password"
+      name="password"
+      placeholder="(blank for now)"
+    >
+    <!--
+      name="password" is the form key.
+      FastAPI reads it in Python using: form.get("password")
+    -->
+  </div>
+
+  <button class="btn" type="submit">Sign In</button>
+</form>
+
+
+{# 
+  Important nesting rule:
+  - Close all inner logic blocks first (endif/endfor)
+  - Then close outer blocks (endblock)
+#}
+{% endblock %}

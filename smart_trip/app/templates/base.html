@@ -1,0 +1,60 @@
+<!-- app/templates/base.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>{{ title or "Smart Trip" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    .popup-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:9999}
+    .popup{background:#fff;border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.18);max-width:520px;width:92%;padding:18px 18px 14px}
+    .popup h3{margin:0 0 10px;font-size:18px}
+    .popup p{margin:0 0 14px;color:#374151;line-height:1.4}
+    .popup .btnrow{display:flex;justify-content:flex-end;gap:10px}
+    .btn{border:1px solid rgba(17,24,39,.12);background:#111827;color:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .btn.secondary{background:#fff;color:#111827}
+    .audit-trace-float{position:static;display:flex;justify-content:center;margin:8px 0 8px;text-align:center}
+    .audit-trace-link{display:inline-flex;align-items:center;justify-content:center;background:#111827;color:#fff;border-radius:999px;padding:10px 14px;box-shadow:0 10px 24px rgba(17,24,39,.12);font-size:13px;line-height:1;text-decoration:none;border:1px solid rgba(255,255,255,.14);white-space:nowrap}
+    .audit-trace-link:hover{opacity:.94}
+  </style>
+</head>
+<body>
+  {% if request and request.url.path != '/portal/audit/trace' %}
+    <div class="audit-trace-float">
+      <a class="audit-trace-link" href="/portal/audit/trace" target="_blank" rel="noopener">View Audit Trace Log</a>
+    </div>
+  {% endif %}
+
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+
+  <div id="popupBackdrop" class="popup-backdrop">
+    <div class="popup">
+      <h3 id="popupTitle">Message</h3>
+      <p id="popupText"></p>
+      <div class="btnrow">
+        <button class="btn secondary" onclick="hidePopup()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showPopup(title, text){
+      document.getElementById("popupTitle").textContent = title || "Message";
+      document.getElementById("popupText").textContent = text || "";
+      document.getElementById("popupBackdrop").style.display = "flex";
+    }
+    function hidePopup(){
+      document.getElementById("popupBackdrop").style.display = "none";
+    }
+
+    {% if page_error %}
+      showPopup("Error", {{ page_error|tojson }});
+    {% elif page_msg %}
+      showPopup("Saved", {{ page_msg|tojson }});
+    {% endif %}
+  </script>
+</body>
+</html>

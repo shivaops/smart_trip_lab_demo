@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="top">
+  <div>
+    <div class="h1">Guided Booking • Confirm</div>
+    <div class="muted">Step-3: Confirm page now starts from the selected journey and dynamic fare combinations saved in search results.</div>
+  </div>
+  <div class="pill">Signed in as {{ request.state.user_name if request.state and request.state.user_name else "shiva" }}</div>
+</div>
+
+{% if not selected_row %}
+<div class="card">
+  <div class="h2" style="font-size:18px; font-weight:800;">No Flight Selected</div>
+  <div class="muted" style="margin-top:8px;">No flight selected yet. Please go back and click <b>Book Now</b> on one result card.</div>
+  <div style="margin-top:14px;"><a class="btn btn-ghost" href="/portal/flight/search">Back to Search</a></div>
+</div>
+{% else %}
+{% set cm = confirm_model or {} %}
+{% set journey = cm.get('journey', {}) %}
+{% set outbound = journey.get('outbound', {}) %}
+{% set return_leg = journey.get('return', {}) %}
+{% set selected_fare = cm.get('selected_fare', {}) %}
+{% set selected_doc_ids = selected_document_ids if selected_document_ids is defined and selected_document_ids else [] %}
+
+<style>
+.confirm-page-shell{width:92%;max-width:1800px;margin:0 auto;}
+.confirm-uniform-card{padding:20px;border-radius:18px;width:100%;box-sizing:border-box;}
+.fare-set-card{border:1px solid rgba(17,24,39,0.08);border-radius:18px;background:#f8fafc;padding:16px;} 
+.fare-set-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.fare-set-stack{display:flex;flex-direction:column;gap:18px;align-items:stretch;}
+.fare-set-scroller{display:flex;gap:14px;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:thin;flex-wrap:nowrap;}
+.fare-set-scroller::-webkit-scrollbar{height:8px;}
+.fare-set-scroller::-webkit-scrollbar-thumb{background:rgba(148,163,184,.6);border-radius:999px;}
+.fare-mini-card{flex:0 0 235px;min-width:235px;display:flex;flex-direction:column;gap:12px;border:1px solid rgba(17,24,39,0.10);border-radius:18px;background:#fff;padding:18px;cursor:pointer;box-shadow:0 6px 18px rgba(23,23,42,0.04);}
+.confirm-journey-body{display:flex;justify-content:space-between;gap:16px;align-items:stretch;flex-wrap:wrap;}
+.confirm-journey-main{display:flex;flex-direction:column;gap:14px;flex:1 1 0;min-width:0;}
+.confirm-form-wrap{width:100%;box-sizing:border-box;}
+.segment-leg-card{border:1px solid rgba(17,24,39,0.08);border-radius:16px;padding:14px;background:#fcfcff;}
+.segment-leg-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.segment-route-row{display:grid;grid-template-columns:minmax(88px,1fr) minmax(90px,auto) minmax(88px,1fr);align-items:center;column-gap:14px;margin-top:12px;}
+.segment-airport-block{min-width:0;}
+.segment-airport-code{font-size:22px;font-weight:800;line-height:1.1;white-space:nowrap;}
+.segment-airport-time{font-size:13px;margin-top:4px;}
+.segment-center-line{display:flex;flex-direction:column;align-items:center;min-width:90px;}
+.segment-center-cities{font-size:12px;text-align:center;white-space:nowrap;}
+.selected-total-card{min-width:320px;max-width:360px;border:1px solid rgba(37,99,235,0.18);background:#f8fbff;border-radius:18px;padding:14px 18px;text-align:right;box-shadow:0 4px 14px rgba(37,99,235,0.06);}
+@media (max-width: 980px){
+  .confirm-page-shell{width:94%;}
+  .confirm-journey-body{flex-direction:column;}
+  .segment-route-row{grid-template-columns:1fr;row-gap:10px;}
+  .segment-center-line{order:2;}
+  .selected-total-card{width:100%;max-width:none;}
+}
+.fare-set-route{display:flex;align-items:center;justify-content:flex-start;flex:1 1 auto;min-width:320px;padding:10px 14px;border:1px solid rgba(37,99,235,0.14);background:linear-gradient(180deg,#f8fbff,#eef6ff);border-radius:14px;font-size:15px;font-weight:800;color:#0f172a;line-height:1.35;box-shadow:0 4px 14px rgba(37,99,235,0.06);}
+</style>
+
+<div class="confirm-page-shell">
+
+<div class="card confirm-uniform-card">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap; margin-bottom:14px;">
+    <div>
+      <div class="h2" style="font-size:20px; font-weight:800;">Select Your Fare Option</div>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="/portal/flight/search">Modify Search</a>
+      <a class="btn btn-ghost" href="javascript:history.back()">Back</a>
+    </div>
+  </div>
+
+  <div class="fare-set-stack">
+    <div class="fare-set-card">
+      <div class="fare-set-head">
+        <div class="fare-set-route">
+          {{ outbound.get('route', {}).get('from', {}).get('city', '-') }} ✈ {{ outbound.get('route', {}).get('to', {}).get('city', '-') }}
+          &nbsp; • &nbsp;
+          {{ outbound.get('airline', {}).get('name', '-') }}
+          &nbsp; • &nbsp;
+          <span class="js-format-datetime" data-raw="{{ outbound.get('schedule', {}).get('scheduled_departure_formatted', outbound.get('schedule', {}).get('scheduled_departure', '-')) }}">{{ outbound.get('schedule', {}).get('scheduled_departure_formatted', outbound.get('schedule', {}).get('scheduled_departure', '-')) }}</span>
+        </div>
+      </div>
+      <div class="fare-set-scroller">
+        {% for fare in cm.get('outbound_fare_cards', []) %}
+        <label class="fare-option-card fare-mini-card" data-side="outbound" data-fare-id="{{ fare.fare_id }}" data-total="{{ '%.2f'|format(fare.total) }}" data-base="{{ '%.2f'|format(fare.base_fare) }}" data-taxes="{{ '%.2f'|format(fare.taxes) }}" data-fees="{{ '%.2f'|format(fare.fees) }}" data-currency="{{ fare.currency }}" data-family="{{ fare.fare_family }}">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+            <div>
+              <div style="font-size:14px; color:#64748b; font-weight:700;">{{ fare.travel_class }}</div>
+              <div style="font-size:28px; font-weight:900; line-height:1.1; margin-top:4px;">{{ fare.total|round(2) }}</div>
+              <div class="muted" style="font-size:13px; margin-top:4px;">{{ fare.currency }}</div>
+              <div class="muted" style="font-size:13px; margin-top:6px;">{{ fare.fare_family }}</div>
+              <div style="margin-top:10px; padding:8px 10px; border:1px solid rgba(17,24,39,0.08); border-radius:12px; background:#f8fafc; min-width:150px;">
+                <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="muted">Base</span><b>{{ '%.2f'|format(fare.base_fare) }}</b></div>
+                <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="muted">Taxes</span><b>{{ '%.2f'|format(fare.taxes) }}</b></div>
+                <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="muted">Fees</span><b>{{ '%.2f'|format(fare.fees) }}</b></div>
+              </div>
+            </div>
+            <input type="radio" name="outbound_fare_choice_visual" value="{{ fare.fare_id }}" {% if fare.is_default %}checked{% endif %} onclick="recalcFareTotal()" style="width:20px; height:20px; accent-color:#eb4a25;"/>
+          </div>
+          <div style="height:1px; background:rgba(17,24,39,0.08);"></div>
+          <div><div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:6px;">Baggage</div><div class="muted" style="font-size:13px;">{{ fare.baggage }}</div></div>
+          <div><div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:6px;">Refund</div><div class="muted" style="font-size:13px;">{{ fare.refundable }}</div></div>
+          <div><div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:6px;">Change</div><div class="muted" style="font-size:13px;">{{ fare.changeable }}</div></div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if cm.get('trip_type') == 'ROUND_TRIP' %}
+    <div class="fare-set-card">
+      <div class="fare-set-head">
+        <div class="fare-set-route">
+          {{ return_leg.get('route', {}).get('from', {}).get('city', '-') }} ✈ {{ return_leg.get('route', {}).get('to', {}).get('city', '-') }}
+          &nbsp; • &nbsp;
+          {{ return_leg.get('airline', {}).get('name', '-') }}
+          &nbsp; • &nbsp;
+          <span class="js-format-datetime" data-raw="{{ return_leg.get('schedule', {}).get('scheduled_departure_formatted', return_leg.get('schedule', {}).get('scheduled_departure', '-')) }}">{{ return_leg.get('schedule', {}).get('scheduled_departure_formatted', return_leg.get('schedule', {}).get('scheduled_departure', '-')) }}</span>
+        </div>
+      </div>
+      <div class="fare-set-scroller">
+        {% for fare in cm.get('return_fare_cards', []) %}
+        <label class="fare-option-card fare-mini-card" data-side="return" data-fare-id="{{ fare.fare_id }}" data-total="{{ '%.2f'|format(fare.total) }}" data-base="{{ '%.2f'|format(fare.base_fare) }}" data-taxes="{{ '%.2f'|format(fare.taxes) }}" data-fees="{{ '%.2f'|format(fare.fees) }}" data-currency="{{ fare.currency }}" data-family="{{ fare.fare_family }}">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+            <div>
+              <div style="font-size:14px; color:#64748b; font-weight:700;">{{ fare.travel_class }}</div>
+              <div style="font-size:28px; font-weight:900; line-height:1.1; margin-top:4px;">{{ fare.total|round(2) }}</div>
+              <div class="muted" style="font-size:13px; margin-top:4px;">{{ fare.currency }}</div>
+              <div class="muted" style="font-size:13px; margin-top:6px;">{{ fare.fare_family }}</div>
+              <div style="margin-top:10px; padding:8px 10px; border:1px solid rgba(17,24,39,0.08); border-radius:12px; background:#f8fafc; min-width:150px;">
+                <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="muted">Base</span><b>{{ '%.2f'|format(fare.base_fare) }}</b></div>
+                <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="muted">Taxes</span><b>{{ '%.2f'|format(fare.taxes) }}</b></div>
+                <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="muted">Fees</span><b>{{ '%.2f'|format(fare.fees) }}</b></div>
+              </div>
+            </div>
+            <input type="radio" name="return_fare_choice_visual" value="{{ fare.fare_id }}" {% if fare.is_default %}checked{% endif %} onclick="recalcFareTotal()" style="width:20px; height:20px; accent-color:#eb4a25;"/>
+          </div>
+          <div style="height:1px; background:rgba(17,24,39,0.08);"></div>
+          <div><div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:6px;">Baggage</div><div class="muted" style="font-size:13px;">{{ fare.baggage }}</div></div>
+          <div><div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:6px;">Refund</div><div class="muted" style="font-size:13px;">{{ fare.refundable }}</div></div>
+          <div><div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:6px;">Change</div><div class="muted" style="font-size:13px;">{{ fare.changeable }}</div></div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+    <div style="display:flex; align-items:center; gap:14px; border:1px solid rgba(37,99,235,0.18); background:#f8fbff; border-radius:18px; padding:14px 18px; min-width:340px; justify-content:space-between;">
+      <div>
+        <div class="muted" style="font-size:12px;">Selected Fare Total</div>
+        <div id="fareSummaryFamily" class="muted" style="font-size:13px; margin-top:4px;">{{ selected_fare.display_family }}</div>
+      </div>
+      <div style="text-align:right;">
+        <div id="fareSummaryAmount" style="font-size:30px; font-weight:900; line-height:1.1;">{{ '%.2f'|format(selected_fare.total or 0) }}</div>
+        <div id="fareSummaryCurrency" class="muted" style="font-size:13px; margin-top:4px;">{{ selected_fare.currency }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card confirm-uniform-card" style="margin-top:16px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+    <div>
+      <div class="h2" style="font-size:20px; font-weight:800;">Selected Journey</div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+     <span class="pill">{{ cm.get('trip_type', 'ONE_WAY') }}</span>
+      <!--{% if cm.get('search_summary', {}).get('depart_date') %}<span class="pill">Depart: <span class="js-format-date" data-raw="{{ cm.get('search_summary', {}).get('depart_date') }}">{{ cm.get('search_summary', {}).get('depart_date') }}</span></span>{% endif %}
+      {% if cm.get('search_summary', {}).get('return_date') and cm.get('trip_type') == 'ROUND_TRIP' %}<span class="pill">Return: <span class="js-format-date" data-raw="{{ cm.get('search_summary', {}).get('return_date') }}">{{ cm.get('search_summary', {}).get('return_date') }}</span></span>{% endif %}-->
+    </div> 
+  </div>
+
+  <div style="border:1px solid rgba(17,24,39,0.08); border-radius:18px; background:#fff; overflow:hidden;">
+    <div class="confirm-journey-body" style="padding:18px;">
+      <div class="confirm-journey-main">
+        <div style="display:grid; grid-template-columns:1fr {% if cm.get('trip_type') == 'ROUND_TRIP' %}1fr{% endif %}; gap:14px;">
+          <div class="segment-leg-card">
+            <div class="muted" style="font-size:12px; font-weight:700; margin-bottom:10px;">Outbound</div>
+            <div class="segment-leg-top">
+              <div>
+                <div style="font-size:17px; font-weight:800;">{{ outbound.get('airline', {}).get('name', '-') }}</div>
+                <div class="muted" style="font-size:13px; margin-top:2px;">{{ outbound.get('flight_number', '-') }}</div>
+              </div>
+              <div class="muted" style="font-size:12px;">{{ outbound.get('duration_formatted', '-') }} • {{ outbound.get('stops', {}).get('stops_formatted', '-') }}</div>
+            </div>
+            <div class="segment-route-row">
+              <div class="segment-airport-block">
+                <div class="segment-airport-code">{{ outbound.get('route', {}).get('from', {}).get('airport', '-') }}</div>
+                <div class="muted segment-airport-time"><span class="js-format-datetime" data-raw="{{ outbound.get('schedule', {}).get('scheduled_departure_display', outbound.get('schedule', {}).get('scheduled_departure_formatted', outbound.get('schedule', {}).get('scheduled_departure', '-'))) }}">{{ outbound.get('schedule', {}).get('scheduled_departure_display', outbound.get('schedule', {}).get('scheduled_departure_formatted', outbound.get('schedule', {}).get('scheduled_departure', '-'))) }}</span></div>
+              </div>
+              <div class="segment-center-line">
+                <div style="width:90px; height:2px; background:#cbd5e1; position:relative; margin-bottom:6px;">
+                  <span style="position:absolute; right:-2px; top:-5px; font-size:12px; color:#64748b;">✈</span>
+                </div>
+                <div class="muted segment-center-cities">{{ outbound.get('route', {}).get('from', {}).get('city', '-') }} → {{ outbound.get('route', {}).get('to', {}).get('city', '-') }}</div>
+              </div>
+              <div class="segment-airport-block" style="text-align:right;">
+                <div class="segment-airport-code">{{ outbound.get('route', {}).get('to', {}).get('airport', '-') }}</div>
+                <div class="muted segment-airport-time"><span class="js-format-datetime" data-raw="{{ outbound.get('schedule', {}).get('scheduled_arrival_formatted', outbound.get('schedule', {}).get('scheduled_arrival', '-')) }}">{{ outbound.get('schedule', {}).get('scheduled_arrival_formatted', outbound.get('schedule', {}).get('scheduled_arrival', '-')) }}</span></div>
+              </div>
+            </div>
+          </div>
+
+          {% if cm.get('trip_type') == 'ROUND_TRIP' %}
+          <div class="segment-leg-card">
+            <div class="muted" style="font-size:12px; font-weight:700; margin-bottom:10px;">Return</div>
+            <div class="segment-leg-top">
+              <div>
+                <div style="font-size:17px; font-weight:800;">{{ return_leg.get('airline', {}).get('name', '-') }}</div>
+                <div class="muted" style="font-size:13px; margin-top:2px;">{{ return_leg.get('flight_number', '-') }}</div>
+              </div>
+              <div class="muted" style="font-size:12px;">{{ return_leg.get('duration_formatted', '-') }} • {{ return_leg.get('stops', {}).get('stops_formatted', '-') }}</div>
+            </div>
+            <div class="segment-route-row">
+              <div class="segment-airport-block">
+                <div class="segment-airport-code">{{ return_leg.get('route', {}).get('from', {}).get('airport', '-') }}</div>
+                <div class="muted segment-airport-time"><span class="js-format-datetime" data-raw="{{ return_leg.get('schedule', {}).get('scheduled_departure_display', return_leg.get('schedule', {}).get('scheduled_departure_formatted', return_leg.get('schedule', {}).get('scheduled_departure', '-'))) }}">{{ return_leg.get('schedule', {}).get('scheduled_departure_display', return_leg.get('schedule', {}).get('scheduled_departure_formatted', return_leg.get('schedule', {}).get('scheduled_departure', '-'))) }}</span></div>
+              </div>
+              <div class="segment-center-line">
+                <div style="width:90px; height:2px; background:#cbd5e1; position:relative; margin-bottom:6px;">
+                  <span style="position:absolute; right:-2px; top:-5px; font-size:12px; color:#64748b;">✈</span>
+                </div>
+                <div class="muted segment-center-cities">{{ return_leg.get('route', {}).get('from', {}).get('city', '-') }} → {{ return_leg.get('route', {}).get('to', {}).get('city', '-') }}</div>
+              </div>
+              <div class="segment-airport-block" style="text-align:right;">
+                <div class="segment-airport-code">{{ return_leg.get('route', {}).get('to', {}).get('airport', '-') }}</div>
+                <div class="muted segment-airport-time"><span class="js-format-datetime" data-raw="{{ return_leg.get('schedule', {}).get('scheduled_arrival_formatted', return_leg.get('schedule', {}).get('scheduled_arrival', '-')) }}">{{ return_leg.get('schedule', {}).get('scheduled_arrival_formatted', return_leg.get('schedule', {}).get('scheduled_arrival', '-')) }}</span></div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+    <div class="selected-total-card">
+      <div class="muted" style="font-size:12px; margin-bottom:4px;">Total Amount</div>
+      <div id="journeyCardAmount" style="font-size:30px; font-weight:900; line-height:1.1;">{{ selected_fare.currency }} {{ '%.2f'|format(selected_fare.total or 0) }}</div>
+      <div class="muted" id="journeyCardSubtext" style="font-size:13px; margin-top:6px;">{{ selected_fare.display_family if selected_fare else '' }}</div>
+    </div>
+  </div>
+</div>
+
+{% if booking_success %}
+<div class="card" style="margin-top:16px; border-color:rgba(16,185,129,0.24); background:linear-gradient(180deg, rgba(16,185,129,0.08), rgba(255,255,255,0.98));">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap;">
+    <div>
+      <div class="h2" style="font-size:20px; font-weight:900; color:rgba(6,95,70,1);">Booking Confirmed Successfully</div>
+      <div class="muted" style="margin-top:6px;">Your booking is now saved. Verify the final booking outcome below.</div>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="/portal/flight/search">Back to Search</a>
+      {% if confirmed_journey and confirmed_journey.booking_ref %}<a class="btn btn-ghost" href="/portal/flight/booking-summary?booking_ref={{ confirmed_journey.booking_ref }}">View Booking Summary</a>{% endif %}
+      <a class="btn" href="{{ provider_portal_url or ('http://bookmyflight.local:8002/manage-booking?booking_ref=' ~ (confirmed_journey.booking_ref if confirmed_journey else "")) }}" target="_blank" rel="noopener">Manage on Airline Portal</a>
+    </div>
+  </div>
+  {% if confirmed_journey %}
+    <div class="grid grid-3" style="margin-top:16px;">
+      <div class="card" style="margin:0; background:white; border-color:rgba(16,185,129,0.18);">
+        <div class="muted">Booking Reference</div>
+        <div style="font-size:20px; font-weight:900; margin-top:6px;">{{ confirmed_journey.booking_ref or '-' }}</div>
+        <div class="muted" style="margin-top:6px;">Provider reference for manage-booking and audit trace.</div>
+      </div>
+      <div class="card" style="margin:0; background:white; border-color:rgba(16,185,129,0.18);">
+        <div class="muted">Trip / Status</div>
+        <div style="font-size:18px; font-weight:800; margin-top:6px;">{{ confirmed_journey.trip_type or '-' }}</div>
+        <div style="margin-top:6px;"><span class="pill">Status: {{ confirmed_journey.status or 'CONFIRMED' }}</span></div>
+      </div>
+      <div class="card" style="margin:0; background:white; border-color:rgba(16,185,129,0.18);">
+        <div class="muted">Amount</div>
+        <div style="font-size:20px; font-weight:900; margin-top:6px;">{{ confirmed_journey.total_amount or '-' }} {{ confirmed_journey.currency or '' }}</div>
+        <div class="muted" style="margin-top:6px;">Final provider-confirmed booking amount.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;">
+      {% if confirmed_journey.passenger_count %}<span class="pill">Passengers: {{ confirmed_journey.passenger_count }}</span>{% endif %}
+      {% if confirmed_journey.segment_count %}<span class="pill">Segments: {{ confirmed_journey.segment_count }}</span>{% endif %}
+      {% if confirmed_journey.booking_ref %}<span class="pill">Ref: {{ confirmed_journey.booking_ref }}</span>{% endif %}
+    </div>
+  {% endif %}
+  <div style="margin-top:18px; border-top:1px solid rgba(17,24,39,0.10); padding-top:14px;">
+    <div class="h2" style="font-size:18px; font-weight:800;">Booking Confirmation Details</div>
+    <div class="muted" style="margin-top:4px;">Response is driven by cfg (endpoint 2 • RESPONSE • BOOK_CONFIRM).</div>
+  </div>
+  {% if confirm_fields and confirm_row %}
+    <div style="overflow:auto; margin-top:14px; border:1px solid rgba(17,24,39,0.10); border-radius:12px;">
+      <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:13px;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:10px 10px; background:white; border-bottom:1px solid rgba(17,24,39,0.12); white-space:nowrap; width:38%;">Field</th>
+            <th style="text-align:left; padding:10px 10px; background:white; border-bottom:1px solid rgba(17,24,39,0.12); white-space:nowrap;">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in confirm_fields %}
+            {% set cfgid = (f.get('cfg_id') if f.get('cfg_id') is not none else '') %}
+            {% set label = (f.get('ui_label') or f.get('label') or f.get('parameter_name') or f.get('provider_parameter_name') or ('cfg_' ~ cfgid)) %}
+            <tr>
+              <td style="padding:10px 10px; border-bottom:1px solid rgba(17,24,39,0.08);"><span style="font-weight:700;">{{ label }}</span></td>
+              <td style="padding:10px 10px; border-bottom:1px solid rgba(17,24,39,0.08);"><span class="pill" style="border-radius:10px; padding:6px 10px;">{{ confirm_row.get((cfgid|string), "") }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="margin-top:14px; color:rgba(17,24,39,0.60);">No BOOK_CONFIRM cfg rows found for endpoint 2, or confirm_row not provided by router.</div>
+  {% endif %}
+  {% if confirmed_journey and confirmed_journey.segments %}
+    <div class="card" style="margin-top:16px; background:rgba(16,185,129,0.04); border-color:rgba(16,185,129,0.16);">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div>
+          <div class="h2" style="font-size:18px; font-weight:800;">Saved Journey Segments</div>
+          <div class="muted" style="margin-top:4px;">These are the real provider-confirmed itinerary legs saved under the same booking reference.</div>
+        </div>
+        <div class="pill">Visible confirmation of itinerary legs</div>
+      </div>
+      <div class="grid grid-2" style="margin-top:14px;">
+        {% for seg in confirmed_journey.segments %}
+          <div class="card" style="margin:0; background:white; border-color:{% if seg.leg_type == 'OUTBOUND' %}rgba(59,130,246,0.20){% elif seg.leg_type == 'INBOUND' %}rgba(16,185,129,0.22){% else %}rgba(17,24,39,0.10){% endif %};">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+              <div class="h2" style="font-size:16px; font-weight:800; margin:0;">{{ seg.leg_title }}{% if seg.sequence_no %} • Sequence {{ seg.sequence_no }}{% endif %}</div>
+              <span class="pill">{{ seg.leg_type or ('SEGMENT ' ~ loop.index) }}</span>
+            </div>
+            <div class="grid grid-2">
+              <div><div class="muted">Flight No</div><div><b>{{ seg.flight_number or '-' }}</b></div></div>
+              <div><div class="muted">Segment ID</div><div><b>{{ seg.segment_id or '-' }}</b></div></div>
+              <div><div class="muted">From → To</div><div><b>{{ seg.from_airport or '-' }} → {{ seg.to_airport or '-' }}</b></div></div>
+              <div><div class="muted">Fare ID</div><div><b>{{ seg.fare_id or '-' }}</b></div></div>
+              <div><div class="muted">Departure</div><div><b>{{ seg.scheduled_departure_display or seg.scheduled_departure or '-' }}</b></div></div>
+              <div><div class="muted">Arrival</div><div><b>{{ seg.scheduled_arrival_display or seg.scheduled_arrival or '-' }}</b></div></div>
+              <div><div class="muted">Flight ID</div><div><b>{{ seg.flight_id or '-' }}</b></div></div>
+              <div><div class="muted">Booking Ref</div><div><b>{{ confirmed_journey.booking_ref or '-' }}</b></div></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% else %}
+<div class="card confirm-uniform-card" style="margin-top:16px;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+    <div>
+      {% if page_error %}
+      <div style="margin-top:12px; padding:10px 12px; border:1px solid rgba(239,68,68,0.30); background:rgba(239,68,68,0.08); border-radius:12px; color:rgba(185,28,28,0.95);">
+        <b>Booking blocked:</b> {{ page_error }}
+      </div>
+      {% endif %}
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="/travelers?return_to=confirm&agent_fsr_id={{ selected_row.get('agent_fsr_id') }}">View / Edit Traveller Doc</a>
+      <button class="btn btn-ghost" type="button" onclick="applyBookingAutofill()">Auto Populate Traveller Data</button>
+    </div>
+  </div>
+
+  <form method="post" action="/portal/flight/confirm" onsubmit="return confirm('Do you want to proceed for booking?');" class="confirm-form-wrap" style="margin-top:16px;">
+    <input type="hidden" name="agent_fsr_id" value="{{ selected_row.get('agent_fsr_id') }}"/>
+    <input type="hidden" name="selected_outbound_fare_id" id="selected_outbound_fare_id" value="{{ (confirm_model.selected_fare.outbound_fare_id if confirm_model and confirm_model.selected_fare else '') }}"/>
+    <input type="hidden" name="selected_return_fare_id" id="selected_return_fare_id" value="{{ (confirm_model.selected_fare.return_fare_id if confirm_model and confirm_model.selected_fare else '') }}"/>
+    <input type="hidden" name="selected_fare_combo_key" id="selected_fare_combo_key" value="{{ (confirm_model.selected_fare.fare_combo_key if confirm_model and confirm_model.selected_fare else '') }}"/>
+    <input type="hidden" name="selected_total_amount" id="selected_total_amount" value="{{ ('%.2f'|format(confirm_model.selected_fare.total)) if confirm_model and confirm_model.selected_fare else '' }}"/>
+    <input type="hidden" name="selected_currency" id="selected_currency" value="{{ (confirm_model.selected_fare.currency if confirm_model and confirm_model.selected_fare else '') }}"/>
+
+    <div class="traveller-select-card" style="margin-top:6px; border:1px solid rgba(17,24,39,0.10); border-radius:16px; background:#fff; overflow:hidden;">
+      <div style="padding:12px 14px; border-bottom:1px solid rgba(17,24,39,0.08); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div>
+          <div class="h2" style="font-size:16px; font-weight:800; margin:0;">Traveller Selection</div>
+          <div class="muted" style="margin-top:4px;">Click Auto Populate Traveller Data to show all active travellers for the current login user. Select required traveller row(s) only.</div>
+        </div>
+      </div>
+
+      <div id="travellerSelectionWrap" data-keep-open="{% if page_error or selected_doc_ids %}Y{% else %}N{% endif %}" style="display:{% if page_error or selected_doc_ids %}block{% else %}none{% endif %}; padding:14px;">
+        {% if traveler_rows %}
+        <div style="overflow:auto;">
+          <table style="width:100%; border-collapse:collapse; min-width:520px;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="text-align:left; padding:10px; border-bottom:1px solid rgba(17,24,39,0.08); width:80px;">Select</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid rgba(17,24,39,0.08);">Traveller Type</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid rgba(17,24,39,0.08);">First Name</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid rgba(17,24,39,0.08);">Last Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in traveler_rows %}
+              <tr>
+                <td style="padding:10px; border-bottom:1px solid rgba(17,24,39,0.06);">
+                  <input type="checkbox" name="selected_document_ids" value="{{ row.document_id }}" {% if row.document_id in selected_doc_ids %}checked{% endif %} style="width:16px; height:16px; cursor:pointer;">
+                </td>
+                <td style="padding:10px; border-bottom:1px solid rgba(17,24,39,0.06);">{{ row.traveler_type or '' }}</td>
+                <td style="padding:10px; border-bottom:1px solid rgba(17,24,39,0.06);">{{ row.first_name or '' }}</td>
+                <td style="padding:10px; border-bottom:1px solid rgba(17,24,39,0.06);">{{ row.last_name or '' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="padding:10px 12px; border:1px solid rgba(245,158,11,0.30); background:rgba(245,158,11,0.08); border-radius:12px; color:#92400e;">
+          No active traveller records found for this login user. Please use View / Edit Traveller Doc, save active traveller(s), then click Auto Populate Traveller Data again.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display:none;">
+      {% for f in booking_fields %}
+        {% set current_value = (posted_form_data.get(f.name) if posted_form_data else none) or booking_autofill.get(f.name) or f.default_value or '' %}
+        {% if (f.control|upper) == "CHECKBOX" %}
+          <input type="hidden" name="{{ f.name }}" value="{% if current_value in ['Y','1','true','True',1,True,'on'] %}Y{% else %}N{% endif %}" />
+        {% else %}
+          <input type="hidden" name="{{ f.name }}" value="{{ current_value }}" />
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div style="display:flex; gap:10px; margin-top:16px; align-items:center; flex-wrap:wrap;">
+      {% if rebook_blocked %}
+      <button class="btn" type="button" disabled style="opacity:0.65; cursor:not-allowed;">Already Booked</button>
+      {% else %}
+      <button class="btn" type="submit">Submit Booking</button>
+      {% endif %}
+      <a class="btn btn-ghost" href="/portal/flight/search">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+</div>
+{% endif %}
+
+{% if popup_message %}
+<script>
+window.addEventListener('load', function(){ showPopup('Message', "{{ popup_message|e }}"); });
+</script>
+{% endif %}
+
+<script>
+function applyBookingAutofill() {
+  const wrap = document.getElementById('travellerSelectionWrap');
+  if (wrap) {
+    wrap.style.display = 'block';
+  }
+}
+window.addEventListener('load', function(){
+  const wrap = document.getElementById('travellerSelectionWrap');
+  if (wrap && wrap.dataset.keepOpen === 'Y') {
+    wrap.style.display = 'block';
+  }
+});
+</script>
+
+<script>
+function getSelectedFareCard(side) {
+  const selector = side === 'return' ? 'input[name="return_fare_choice_visual"]:checked' : 'input[name="outbound_fare_choice_visual"]:checked';
+  const radio = document.querySelector(selector);
+  return radio ? radio.closest('.fare-option-card') : null;
+}
+function recalcFareTotal() {
+  const outCard = getSelectedFareCard('outbound');
+  const retCard = getSelectedFareCard('return');
+  const outTotal = outCard ? parseFloat(outCard.dataset.total || '0') : 0;
+  const retTotal = retCard ? parseFloat(retCard.dataset.total || '0') : 0;
+  const total = outTotal + retTotal;
+  const currency = (outCard && outCard.dataset.currency) || (retCard && retCard.dataset.currency) || '';
+  const outFamily = outCard ? (outCard.dataset.family || '') : '';
+  const retFamily = retCard ? (retCard.dataset.family || '') : '';
+  const displayFamily = retCard ? (outFamily + ' + ' + retFamily) : outFamily;
+
+  const amount1 = document.getElementById('fareSummaryAmount');
+  const amount2 = document.getElementById('journeyCardAmount');
+  const fam1 = document.getElementById('fareSummaryFamily');
+  const fam2 = document.getElementById('journeyCardSubtext');
+  const cur1 = document.getElementById('fareSummaryCurrency');
+  if (amount1) amount1.textContent = total.toFixed(2);
+  if (amount2) amount2.textContent = (currency ? (currency + ' ') : '') + total.toFixed(2);
+  if (fam1) fam1.textContent = displayFamily;
+  if (fam2) fam2.textContent = displayFamily;
+  if (cur1) cur1.textContent = currency;
+
+  const hidOut = document.getElementById('selected_outbound_fare_id');
+  const hidRet = document.getElementById('selected_return_fare_id');
+  const hidAmt = document.getElementById('selected_total_amount');
+  const hidCur = document.getElementById('selected_currency');
+  const hidCombo = document.getElementById('selected_fare_combo_key');
+  if (hidOut) hidOut.value = outCard ? (outCard.dataset.fareId || '') : '';
+  if (hidRet) hidRet.value = retCard ? (retCard.dataset.fareId || '') : '';
+  if (hidAmt) hidAmt.value = total.toFixed(2);
+  if (hidCur) hidCur.value = currency;
+  if (hidCombo) hidCombo.value = '';
+
+  document.querySelectorAll('.fare-option-card').forEach(function(card) {
+    const side = card.dataset.side;
+    const active = (side === 'return' ? retCard : outCard) === card;
+    card.style.borderColor = active ? 'rgba(37,99,235,0.45)' : 'rgba(17,24,39,0.10)';
+    card.style.boxShadow = active ? '0 10px 24px rgba(37,99,235,0.12)' : '0 6px 18px rgba(15,23,42,0.04)';
+    card.style.background = active ? '#f8fbff' : '#fff';
+  });
+}
+window.addEventListener('load', function(){ recalcFareTotal(); });
+</script>
+
+
+<script>
+function _fmtDateDisplay(raw, withTime) {
+  if (!raw) return raw;
+  const s = String(raw).trim();
+  if (!s || s === '-') return s;
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::\d{2})?)?$/);
+  if (!m) return s;
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  const hh = m[4] || '00', mm = m[5] || '00';
+  const dt = new Date(y, mo - 1, d, Number(hh), Number(mm));
+  if (Number.isNaN(dt.getTime())) return s;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dd = String(dt.getDate()).padStart(2, '0');
+  const yy = String(dt.getFullYear()).slice(-2);
+  let out = `${days[dt.getDay()]}, ${mons[dt.getMonth()]} ${dd} ${yy}`;
+  if (withTime) out += ` ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  return out;
+}
+window.addEventListener('load', function(){
+  document.querySelectorAll('.js-format-date').forEach(function(el){
+    el.textContent = _fmtDateDisplay(el.dataset.raw || el.textContent, false);
+  });
+  document.querySelectorAll('.js-format-datetime').forEach(function(el){
+    el.textContent = _fmtDateDisplay(el.dataset.raw || el.textContent, true);
+  });
+});
+</script>
+
+{% endblock %}

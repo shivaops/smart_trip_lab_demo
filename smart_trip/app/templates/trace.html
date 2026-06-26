@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .trace-shell{max-width:1240px;margin:28px auto 48px;padding:0 12px}
+  .trace-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  .trace-title{margin:0;font-size:30px;font-weight:800;color:#0f172a}
+  .trace-sub{margin:6px 0 0;color:#475569;font-size:14px;line-height:1.5}
+  .trace-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .trace-btn{border:1px solid rgba(15,23,42,.12);background:#fff;color:#0f172a;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;text-decoration:none}
+  .trace-btn.primary{background:#111827;color:#fff}
+  .trace-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:20px;box-shadow:0 12px 32px rgba(15,23,42,.06)}
+  .trace-filter{padding:18px;margin-bottom:18px}
+  .trace-grid{display:grid;grid-template-columns:120px minmax(320px,1.9fr) minmax(160px,1fr) minmax(160px,1fr) 110px;gap:12px;align-items:end}
+  .field.session-field{max-width:120px}
+  .field.session-field input{max-width:120px;width:120px}
+  .field.event-type-field{min-width:320px}
+  .field.event-type-field select{min-width:320px}
+  .trace-filter-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .field label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px}
+  .field input,.field select{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;font-size:14px;box-sizing:border-box}
+  .field input:focus,.field select:focus{outline:none;border-color:#111827;box-shadow:0 0 0 3px rgba(17,24,39,.08)}
+  .filter-buttons{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+  .summary-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:12px;margin:0 0 18px}
+  .summary-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:14px 16px;box-shadow:0 10px 24px rgba(15,23,42,.05)}
+  .summary-label{font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .summary-value{margin-top:6px;font-size:22px;font-weight:800;color:#0f172a}
+  .summary-sub{margin-top:4px;font-size:12px;color:#475569}
+  .quick-filters{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}
+  .quick-pill{display:inline-flex;align-items:center;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800;border:1px solid #dbeafe;background:#eff6ff;color:#1d4ed8}
+  .trace-list{display:grid;gap:16px}
+  .event-card{padding:18px}
+  .event-action{margin:0 0 14px;font-size:18px;font-weight:800;color:#0f172a}
+  .event-meta{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:10px 24px;align-items:start}
+  .meta-row{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:start}
+  .meta-label{font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.03em;padding-top:2px}
+  .meta-value{font-size:14px;font-weight:700;color:#0f172a;word-break:break-word}
+  .meta-value.status-success{color:#166534}
+  .meta-value.status-fail{color:#991b1b}
+  .meta-value.sev-info{color:#334155}
+  .meta-value.sev-warn{color:#92400e}
+  .meta-value.sev-error{color:#be123c}
+  .event-separator{height:1px;background:#e2e8f0;margin:14px 0}
+  .section-title{font-size:12px;font-weight:800;color:#475569;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.03em}
+  .json-box,.error-box{background:#0f172a;color:#e2e8f0;border-radius:14px;padding:14px;overflow:auto;font-family:Consolas, monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .mini-line{font-size:13px;color:#475569}
+  details.trace-details{margin-top:4px}
+  details.trace-details summary{cursor:pointer;font-weight:800;color:#334155;list-style:none}
+  details.trace-details summary::-webkit-details-marker{display:none}
+  details.trace-details summary::after{content:'Expand';margin-left:8px;font-size:12px;color:#1d4ed8}
+  details.trace-details[open] summary::after{content:'Collapse'}
+  .empty-box{padding:42px 18px;text-align:center;color:#64748b}
+  @media (max-width: 1080px){.trace-grid{grid-template-columns:120px minmax(240px,1.8fr) 1fr 1fr 110px}.summary-grid{grid-template-columns:repeat(3,minmax(140px,1fr))}}
+  @media (max-width: 900px){.trace-grid{grid-template-columns:1fr 1fr}.field.event-type-field,.field.event-type-field select{min-width:0;width:100%}.summary-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}.event-meta{grid-template-columns:1fr}}
+  @media (max-width: 620px){.trace-grid{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}.trace-filter-actions{justify-content:stretch}.trace-filter-actions .trace-btn{width:100%;text-align:center}.meta-row{grid-template-columns:82px 1fr}}
+</style>
+
+<div class="trace-shell">
+  <div class="trace-head">
+    <div>
+      <h1 class="trace-title">Audit Trace Viewer</h1>
+      <p class="trace-sub">Review session activity, actions, warnings, and failures across Smart Trip flow.</p>
+      <p class="trace-sub">Current session: <strong>{{ current_session_id if current_session_id else '-' }}</strong> · Mode: <strong>{{ interaction_mode or '-' }}</strong> · Status: <strong>{{ session_status or '-' }}</strong>{% if current_user_name %} · User: <strong>{{ current_user_name }}</strong>{% endif %}</p>
+    </div>
+    <div class="trace-actions">
+      <button type="button" class="trace-btn primary" onclick="traceClosePage()">Close</button>
+    </div>
+  </div>
+
+  <form id="traceFilterForm" class="trace-card trace-filter" method="get" action="/portal/audit/trace">
+    <div class="trace-grid">
+      <div class="field session-field">
+        <label for="session_id">Session ID</label>
+        <input id="session_id" name="session_id" type="number" min="1" value="{{ session_input_value }}" placeholder="default All" />
+      </div>
+      <div class="field event-type-field">
+        <label for="event_type">Event Type</label>
+        <select id="event_type" name="event_type">
+          <option value="">All</option>
+          {% for et in event_type_options %}
+            <option value="{{ et }}" {% if selected_event_type == et %}selected{% endif %}>{{ et }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">All</option>
+          {% for st in status_options %}
+            <option value="{{ st }}" {% if selected_status == st %}selected{% endif %}>{{ st }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">All</option>
+          {% for cat in category_options %}
+            <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="limit">Limit</label>
+        <select id="limit" name="limit">
+          {% for lim in limit_options %}
+            <option value="{{ lim }}" {% if selected_limit == lim %}selected{% endif %}>{{ lim }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="trace-filter-actions">
+      <button class="trace-btn primary" type="submit">Apply Filters</button>
+      <a id="traceResetLink" class="trace-btn" href="/portal/audit/trace?session_id=&event_type=&status=&category=&limit=200">Reset</a>
+    </div>
+  </form>
+
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-label">Scope</div><div class="summary-value">{% if selected_session_id %}Session {{ selected_session_id }}{% else %}All{% endif %}</div></div>
+    <div class="summary-card"><div class="summary-label">Events</div><div class="summary-value">{{ events|length }}</div></div>
+    <div class="summary-card"><div class="summary-label">Success</div><div class="summary-value">{{ success_count }}</div></div>
+    <div class="summary-card"><div class="summary-label">Fail</div><div class="summary-value">{{ fail_count }}</div></div>
+  </div>
+
+  {% if events %}
+    <div class="trace-list">
+      {% for row in events %}
+        <section class="trace-card event-card">
+          <h3 class="event-action">{{ row.message or '-' }}</h3>
+          <div class="event-meta">
+            <div class="meta-row">
+              <div class="meta-label">Session</div>
+              <div class="meta-value">{{ row.session_id or '-' }}</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Category</div>
+              <div class="meta-value">{{ row.category or '-' }}</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Event</div>
+              <div class="meta-value">{{ row.event_type or '-' }}</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Action</div>
+              <div class="meta-value">{{ row.message or '-' }}</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Status</div>
+              <div class="meta-value status-{{ (row.status or '')|lower }}">{{ row.status or '-' }}</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Severity</div>
+              <div class="meta-value sev-{{ (row.severity or '')|lower }}">{{ row.severity or '-' }}</div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-label">Timestamp</div>
+              <div class="meta-value">{{ row.created_at or '-' }}</div>
+            </div>
+          </div>
+          <div class="event-separator"></div>
+
+          {% if row.details_json_parsed not in [none, '', '-', {}] %}
+            <div class="section-title">Event Details</div>
+            {% if row.details_json_text and row.details_json_text|length > 700 %}
+              <details class="trace-details">
+                <summary>Show event details</summary>
+                <div class="json-box" style="margin-top:8px">{{ row.details_json_text }}</div>
+              </details>
+            {% else %}
+              <div class="json-box">{{ row.details_json_text }}</div>
+            {% endif %}
+          {% endif %}
+
+          {% if row.error_type or row.error_text %}
+            <div class="section-title">Error Details</div>
+            <div class="error-box">{% if row.error_type %}Type: {{ row.error_type }}{% endif %}{% if row.error_type and row.error_text %}
+{% endif %}{% if row.error_text %}Text: {{ row.error_text }}{% endif %}</div>
+          {% endif %}
+
+          {% if row.stacktrace_text %}
+            <div class="section-title">Technical Stack Trace</div>
+            <details class="trace-details">
+              <summary>Show stack trace</summary>
+              <div class="error-box" style="margin-top:8px">{{ row.stacktrace_text }}</div>
+            </details>
+          {% endif %}
+        </section>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="trace-card empty-box">No audit events found for the selected filters.</div>
+  {% endif %}
+</div>
+
+<script>
+  function traceClosePage(){
+    try {
+      window.open('', '_self');
+      window.close();
+    } catch (e) {}
+  }
+</script>
+{% endblock %}

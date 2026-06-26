@@ -1,0 +1,2385 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="llm-shell">
+  <div class="llm-topbar">
+    <div class="llm-title">Smart Trip Travel Assistant Chat</div>
+    <div class="llm-top-actions">
+      <a href="/portal/flight/my-bookings-popup" class="btn secondary" target="_blank" rel="noopener">View My All Booking</a>
+      <div class="llm-provider-chip">LLM Provider: {{ llm_provider_name }}{% if llm_provider_code %} ({{ llm_provider_code }}){% endif %}</div>
+      <div class="llm-session-chip">Session #{{ session_id }}</div>
+      <a class="btn secondary" href="/">Back</a>
+    </div>
+  </div>
+
+  <section class="llm-chat-card">
+    <div class="llm-messages" id="llmMessages">
+      <div class="msg msg-assistant" id="initialSystemMsg">
+        <div class="msg-role">Assistant</div>
+        <div class="msg-body">&nbsp;</div>
+      </div>
+    </div>
+
+    <div class="llm-input-wrap">
+      <div class="llm-input-row">
+        <textarea id="llmInput" class="llm-input" rows="3" placeholder="Type your travel request here..."></textarea>
+        <button type="button" class="btn" id="llmSendBtn">Send</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+<style>
+.llm-shell{width:min(900px, calc(100vw - 24px));max-width:min(900px, calc(100vw - 24px));margin:0 auto;padding:8px 0 14px;}
+.llm-topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.llm-title{font-size:16px;font-weight:800;line-height:1.1;color:#0f172a;}
+.llm-top-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.llm-session-chip,.llm-provider-chip{padding:6px 10px;border-radius:999px;background:#f8fafc;border:1px solid #cbd5e1;color:#334155;font-size:11px;font-weight:700;}
+.llm-provider-chip{background:linear-gradient(180deg,#f8fafc 0%,#eef6ff 100%);border-color:#bfdbfe;color:#1d4ed8;}
+.llm-chat-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;box-shadow:0 8px 22px rgba(15,23,42,.05);min-height:calc(100vh - 165px);display:flex;flex-direction:column;padding:10px 10px 12px;}
+.llm-messages{flex:1 1 auto;padding:2px;display:flex;flex-direction:column;gap:10px;overflow:auto;min-height:360px;}
+.msg{width:100%;max-width:100%;border-radius:16px;padding:10px 12px;box-sizing:border-box;}
+.msg-role{font-size:10px;font-weight:800;margin-bottom:5px;letter-spacing:.02em;text-transform:uppercase;}
+.msg-body{font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.msg-body:empty{display:none;}
+.msg-assistant{align-self:stretch;background:linear-gradient(180deg,#eaf4ff 0%,#dbeafe 100%);border:2px solid #2563eb;color:#0b1220;box-shadow:0 8px 20px rgba(37,99,235,.18);border-left:6px solid #1d4ed8;}
+.msg-assistant .msg-role{display:inline-block;color:#ffffff;background:#1d4ed8;font-size:11px;padding:3px 8px;border-radius:999px;letter-spacing:.04em;}
+.msg-assistant .msg-body{font-size:13.5px;font-weight:650;color:#0f172a;}
+.msg-user{align-self:stretch;background:linear-gradient(180deg,#1e3a8a 0%,#1d4ed8 55%,#2563eb 100%);border:1px solid rgba(37,99,235,.28);color:#fff;box-shadow:0 8px 18px rgba(37,99,235,.18);}
+.msg-user .msg-role{color:#dbeafe;}
+.assist-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:8px;}
+.assist-item{background:rgba(255,255,255,.7);border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px 10px;}
+.assist-key{font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.02em;margin-bottom:3px;}
+.assist-val{font-size:12px;line-height:1.35;color:#0f172a;}
+.assist-inline-form{margin-top:10px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;}
+.assist-select,.assist-text{height:38px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:0 12px;font-size:12px;color:#0f172a;min-width:240px;}
+.assist-text{min-width:280px;}
+.assist-hint{margin-top:6px;font-size:11px;color:#475569;}
+.assist-small-btn{height:38px;padding:0 12px;border-radius:12px;border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer;}
+.assist-small-btn:hover{background:#eff6ff;}
+.llm-results-shell{margin-top:12px;border:1px solid rgba(15,23,42,.08);background:#fff;border-radius:16px;padding:10px 12px;}
+.llm-results-top{display:flex;align-items:center;justify-content:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.llm-results-title{font-size:14px;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.llm-results-sub{font-size:11px;color:#475569;}
+.llm-results-sub.inline{font-size:11px;color:#475569;font-weight:600;}
+.llm-filter-bar{display:grid;grid-template-columns:64px 190px 128px 128px auto auto;gap:8px;align-items:end;justify-content:start;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:8px 10px;margin-bottom:10px;}
+.llm-filter-box label{display:block;font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.02em;margin-bottom:4px;}
+.llm-filter-box select,.llm-filter-box input{width:100%;height:34px;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px;font-size:12px;background:#fff;box-sizing:border-box;}
+.llm-result-list{display:flex;flex-direction:column;gap:12px;}
+.llm-card{border:1px solid rgba(15,23,42,.10);border-radius:16px;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);padding:10px 12px;}
+.llm-card-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;}
+.llm-card-price{min-width:96px;text-align:right;}
+.llm-card-price .price{font-size:18px;font-weight:800;color:#0f172a;line-height:1;}
+.llm-card-price .currency{font-size:11px;color:#475569;font-weight:700;}
+.llm-card-price .meta{display:none;}
+.llm-leg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;}
+.llm-leg{border:1px solid #e2e8f0;border-radius:14px;padding:10px;background:#fff;}
+.llm-leg-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px;}
+.llm-airline{font-size:13px;font-weight:800;color:#0f172a;}
+.llm-flightno{font-size:11px;color:#64748b;font-weight:700;}
+.llm-route-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;}
+.llm-airport-block{text-align:left;}
+.llm-airport-block.right{text-align:right;}
+.llm-airport{font-size:18px;font-weight:800;color:#0f172a;line-height:1;}
+.llm-time{font-size:11px;color:#475569;margin-top:3px;}
+.llm-center{text-align:center;}
+.llm-stops-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;}
+.llm-duration{display:block;margin-top:6px;font-size:11px;font-weight:700;color:#334155;}
+.llm-via{margin-top:6px;font-size:11px;color:#64748b;min-height:16px;}
+.llm-card-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed #e2e8f0;}
+.llm-select-wrap{display:flex;align-items:center;gap:8px;}
+.llm-empty{padding:18px;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;color:#475569;font-size:12px;text-align:center;}
+.llm-fare-parent{margin-top:12px;border:1px solid rgba(15,23,42,.10);border-radius:18px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:12px;}
+.llm-fare-block{border:1px solid rgba(15,23,42,.08);border-radius:16px;background:#f8fafc;padding:12px;}
+.llm-fare-block-title{font-size:13px;font-weight:800;color:#0f172a;margin-bottom:8px;}
+.llm-fare-list{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;}
+.llm-fare-card{flex:0 0 230px;min-width:230px;display:flex;flex-direction:column;gap:10px;border:1px solid rgba(17,24,39,0.10);border-radius:18px;background:#fff;padding:16px;cursor:pointer;box-shadow:0 6px 18px rgba(23,23,42,0.04);}
+.llm-fare-card.active{border-color:rgba(37,99,235,0.45);box-shadow:0 10px 24px rgba(37,99,235,0.12);background:#f8fbff;}
+.llm-fare-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.llm-fare-class{font-size:14px;color:#64748b;font-weight:700;}
+.llm-fare-amount{font-size:28px;font-weight:900;line-height:1.1;margin-top:4px;color:#0f172a;}
+.llm-fare-currency,.llm-fare-family,.llm-fare-detail-val{font-size:13px;color:#64748b;}
+.llm-fare-sep{height:1px;background:rgba(17,24,39,0.08);}
+.llm-fare-detail-key{font-size:13px;font-weight:800;color:#0f172a;margin-bottom:4px;}
+.llm-total-card{align-self:flex-end;min-width:320px;max-width:360px;border:1px solid rgba(37,99,235,0.18);background:#f8fbff;border-radius:18px;padding:14px 18px;text-align:right;box-shadow:0 4px 14px rgba(37,99,235,0.06);}
+.llm-total-label{font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.02em;}
+.llm-total-amount{font-size:28px;font-weight:900;color:#0f172a;line-height:1.1;margin-top:6px;}
+.llm-total-family{font-size:13px;color:#64748b;margin-top:6px;}
+.llm-traveler-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.llm-traveler-shell{margin-top:12px;border:1px solid rgba(15,23,42,.10);border-radius:18px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:12px;}
+.llm-traveler-title{font-size:13px;font-weight:800;color:#0f172a;}
+.llm-traveler-list{display:flex;flex-direction:column;gap:10px;}
+.llm-traveler-item{display:flex;align-items:center;gap:10px;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:12px;background:#f8fafc;cursor:pointer;}
+.llm-traveler-item input[type="checkbox"]{width:18px;height:18px;accent-color:#eb4a25;cursor:pointer;}
+.llm-traveler-label{font-size:13px;font-weight:700;color:#0f172a;}
+.llm-traveler-note{font-size:11px;color:#64748b;}
+.llm-traveler-footer{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.llm-traveler-success{padding:10px 12px;border-radius:14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:12px;font-weight:700;}
+
+.llm-input-wrap{border-top:1px solid rgba(15,23,42,.08);padding-top:10px;margin-top:8px;}
+.msg.msg-typing{padding:8px 12px;}
+.msg-typing .msg-body{display:none;}
+.msg-typing-wrap{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid #dbeafe;box-shadow:0 3px 10px rgba(15,23,42,.04);}
+.msg-typing-dot{width:8px;height:8px;border-radius:999px;background:#2563eb;opacity:.35;animation:llmBusyPulse 1.1s infinite ease-in-out;}
+.msg-typing-dot:nth-child(2){animation-delay:.16s;}
+.msg-typing-dot:nth-child(3){animation-delay:.32s;}
+.llm-plane-loader{width:min(520px,100%);border:1px solid #cfe0f5;border-radius:16px;overflow:hidden;background:#eff6ff;box-shadow:0 6px 18px rgba(15,23,42,.08);}
+.llm-plane-sky{position:relative;height:74px;background:linear-gradient(180deg,#07243f 0%,#0d3a63 100%);overflow:hidden;}
+.llm-plane-trail{position:absolute;left:26px;top:35px;width:220px;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.82) 0 24px,transparent 24px 42px);opacity:.9;animation:llmTrailMove 1.1s linear infinite;}
+.llm-plane-icon{position:absolute;left:42px;top:20px;font-size:38px;line-height:1;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.28);transform:rotate(5deg);animation:llmPlaneFly 1.4s ease-in-out infinite;}
+.llm-plane-text{padding:10px 14px;text-align:center;font-size:18px;font-weight:900;color:#0f172a;background:#eaf4ff;}
+.llm-plane-loader.compact .llm-plane-sky{height:58px;}
+.llm-plane-loader.compact .llm-plane-icon{font-size:30px;top:15px;}
+.llm-plane-loader.compact .llm-plane-text{font-size:15px;padding:8px 12px;}
+.sr-only{position:absolute !important;width:1px !important;height:1px !important;padding:0 !important;margin:-1px !important;overflow:hidden !important;clip:rect(0,0,0,0) !important;white-space:nowrap !important;border:0 !important;}
+@keyframes llmBusyPulse{0%,80%,100%{transform:scale(.75);opacity:.28;}40%{transform:scale(1);opacity:1;}}
+@keyframes llmPlaneFly{0%,100%{transform:translateX(0) translateY(0) rotate(5deg);}50%{transform:translateX(28px) translateY(-4px) rotate(5deg);}}
+@keyframes llmTrailMove{0%{transform:translateX(0);}100%{transform:translateX(-42px);}}
+.llm-input-row{display:flex;gap:8px;align-items:flex-end;}
+.llm-input{flex:1 1 auto;resize:vertical;min-height:72px;max-height:220px;border:2px solid #fdba74;border-radius:16px;padding:12px 13px;font-size:13px;line-height:1.45;background:#fffaf0;color:#0f172a;box-sizing:border-box;box-shadow:0 4px 14px rgba(245,158,11,.12);}
+.llm-input::placeholder{color:#7c2d12;font-weight:700;opacity:1;}
+.llm-input:disabled{cursor:not-allowed;background:#f1f5f9;color:#64748b;border-color:#cbd5e1;box-shadow:none;opacity:.78;}
+.llm-input:focus{outline:none;border-color:#2563eb;background:#ffffff;box-shadow:0 0 0 4px rgba(37,99,235,.16),0 8px 20px rgba(37,99,235,.10);}
+#llmSendBtn{min-width:100px;height:46px;font-size:13px;font-weight:800;}
+@media (max-width: 900px){.llm-filter-bar{grid-template-columns:64px minmax(150px,1fr) 110px 110px auto auto;}.llm-leg-grid{grid-template-columns:1fr;}.llm-card-price{text-align:left;}}
+@media (max-width: 700px){.llm-shell{width:calc(100vw - 14px);max-width:calc(100vw - 14px);}.llm-topbar,.llm-input-row{flex-direction:column;align-items:stretch;}#llmSendBtn{width:100%;}.assist-inline-form{flex-direction:column;align-items:stretch;}.assist-select,.assist-text{width:100%;min-width:0;}}
+.llm-control-locked{opacity:.58!important;cursor:not-allowed!important;pointer-events:none!important;filter:grayscale(.15);}
+.llm-select-option-btn.llm-control-locked,.llm-select-option-btn:disabled{background:#f1f5f9!important;border-color:#cbd5e1!important;color:#64748b!important;box-shadow:none!important;cursor:not-allowed!important;pointer-events:none!important;}
+.llm-card.llm-flight-selected{border-color:rgba(37,99,235,.35);background:#f8fbff;}
+.llm-filter-bar.llm-filter-locked{opacity:.68;filter:grayscale(.15);}
+.llm-filter-bar.llm-filter-locked select,.llm-filter-bar.llm-filter-locked input,.llm-filter-bar.llm-filter-locked button{cursor:not-allowed!important;pointer-events:none!important;}
+.llm-parent-card{border:1px solid #dbe3ef;border-radius:14px;padding:12px;background:#fff;margin-top:10px}.llm-parent-title{font-size:15px;font-weight:800;color:#0f172a;margin-bottom:10px}.llm-flight-card,.llm-fare-card{border:1px solid #e2e8f0;border-radius:12px;padding:10px;margin-bottom:10px;background:#f8fafc}.llm-flight-title,.llm-fare-title,.llm-mini-section-title{font-weight:800;color:#0f172a;margin-bottom:6px}.llm-flight-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;font-size:12px}.llm-fare-price{font-size:18px;font-weight:800;color:#0f172a}.llm-mini-line{font-size:12px;color:#334155;margin-top:4px}.llm-mini-section{margin-top:10px}.assist-btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}@media(max-width:800px){.llm-flight-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}</style>
+
+<script>
+function markControlLocked(el, titleText){
+  if (!el || el.dataset.llmLocked === '1') return;
+
+  el.dataset.llmLocked = '1';
+  el.classList.add('llm-control-locked');
+  el.setAttribute('aria-disabled', 'true');
+
+  if (titleText) {
+    el.title = titleText;
+  }
+
+  if ('disabled' in el) {
+    el.disabled = true;
+  }
+}
+
+function lockFlightSelectButton(el, selected){
+  if (!el) return;
+  markControlLocked(el, selected ? 'This flight option is selected.' : 'Flight selection is already selected.');
+  if ('disabled' in el) el.disabled = true;
+  el.tabIndex = -1;
+  el.style.pointerEvents = 'none';
+  if (selected) {
+    el.textContent = 'Selected';
+    const cardEl = el.closest('.llm-card');
+    if (cardEl) cardEl.classList.add('llm-flight-selected');
+  } else if (!selected && String(el.textContent || '').trim().toLowerCase() === 'select option') {
+    el.textContent = 'Locked';
+  }
+}
+
+function lockFlightResultFilterCard(shell){
+  if (!shell) return;
+  shell.dataset.resultsLocked = 'Y';
+  const filterBar = shell.querySelector('.llm-filter-bar');
+  if (!filterBar) return;
+  filterBar.classList.add('llm-filter-locked');
+  filterBar.querySelectorAll('select,input,button').forEach(el => {
+    markControlLocked(el, 'Flight option is already selected. Start a new search to change filters.');
+    if ('disabled' in el) el.disabled = true;
+    el.tabIndex = -1;
+    el.style.pointerEvents = 'none';
+  });
+}
+
+function lockPriorFlightResultFilterCards(){
+  document.querySelectorAll('.llm-results-shell').forEach(shell => lockFlightResultFilterCard(shell));
+}
+
+function lockPriorFlightSelectionControls(selectedAgentFsrId){
+  const selectedId = String(selectedAgentFsrId || '').trim();
+  const activeSelectedId = selectedId || String((chatState && chatState.selectedResult && chatState.selectedResult.agent_fsr_id) || '').trim();
+  document.querySelectorAll('.llm-select-option-btn, [data-action="select-option"]').forEach(el => {
+    const isSelected = activeSelectedId && String(el.dataset.agentFsrId || '').trim() === activeSelectedId;
+    lockFlightSelectButton(el, !!isSelected);
+  });
+  if (activeSelectedId) {
+    lockPriorFlightResultFilterCards();
+  }
+}
+
+function lockPriorFareSelectionControls(){
+  document.querySelectorAll('.llm-fare-parent .llm-fare-card').forEach(card => {
+    markControlLocked(card, 'Fare selection is already selected.');
+    card.style.pointerEvents = 'none';
+
+    const radio = card.querySelector('input[type="radio"]');
+    if (radio) {
+      radio.disabled = true;
+      radio.tabIndex = -1;
+      radio.setAttribute('aria-disabled', 'true');
+    }
+  });
+}
+
+function lockPriorChoiceControls(){
+  lockPriorFlightSelectionControls();
+  lockPriorFareSelectionControls();
+}
+
+(function(){
+  const input = document.getElementById('llmInput');
+  const btn = document.getElementById('llmSendBtn');
+  const box = document.getElementById('llmMessages');
+  const initialSystemMsg = document.getElementById('initialSystemMsg');
+  const TODAY_DATE = '{{ today_date }}';
+  const PROVIDER_CODE = '{{ llm_provider_code }}';
+  const PROVIDER_NAME = '{{ llm_provider_name|default("")|e }}';
+  const SESSION_ID = '{{ session_id }}';
+  const STORAGE_KEY = `tt_llm_state_${SESSION_ID}`;
+  const NAV_ENTRIES = (performance.getEntriesByType && performance.getEntriesByType('navigation')) || [];
+  const IS_BROWSER_RELOAD = !!(NAV_ENTRIES.length && NAV_ENTRIES[0].type === 'reload');
+
+  const chatState = {
+    pendingDateConfirmation: null,
+    pendingMissingField: null,
+    lastOriginalMessage: null,
+    lastNormalizedIntent: null,
+    lastRoutePayload: null,
+    lastSearchResults: null,
+    visibleFlightResults: null,
+    selectedResult: null,
+    selectedFareStage: null,
+    selectedTravelerStage: null,
+    bookingSummaryStage: null,
+    inputContext: { mode: 'travel_request' }
+  };
+
+  const PAYMENT_EVENT_KEY = `tt_llm_payment_done_${SESSION_ID}`;
+  let lastPaymentHandledRef = null;
+  let chatInputLocked = false;
+  let typingMessageEl = null;
+  let resultSelectionInProgress = false;
+
+  function scrollBottom(){ box.scrollTop = box.scrollHeight; }
+  function formatAmount(value, decimals = 0){
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return String(value || '');
+    return num.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  function formatMoney(currency, value, decimals = 2){
+    const amount = formatAmount(value, decimals);
+    return `${currency ? currency + ' ' : ''}${amount}`.trim();
+  }
+  function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chatState)); } catch (e) {} }
+  function restoreState(){ try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return; const saved = JSON.parse(raw); if (saved && typeof saved === 'object') Object.assign(chatState, saved);} catch (e) {} }
+  function clearFlowState(){
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    try { localStorage.removeItem(PAYMENT_EVENT_KEY); } catch (e) {}
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+        const key = localStorage.key(i);
+        if (key && (key.indexOf('tt_llm_state_') === 0 || key.indexOf('tt_llm_payment_done_') === 0)) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {}
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i);
+        if (key && (key.indexOf('tt_llm_state_') === 0 || key.indexOf('tt_llm_payment_done_') === 0 || key.indexOf('tt_llm_') === 0)) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch (e) {}
+    chatState.pendingDateConfirmation = null;
+    chatState.pendingMissingField = null;
+    chatState.lastOriginalMessage = null;
+    chatState.lastNormalizedIntent = null;
+    chatState.lastRoutePayload = null;
+    chatState.lastSearchResults = null;
+    chatState.visibleFlightResults = null;
+    chatState.selectedResult = null;
+    chatState.selectedVisibleOptionLabel = null;
+    chatState.selectedFareStage = null;
+    chatState.selectedTravelerStage = null;
+    chatState.bookingSummaryStage = null;
+    chatState.inputContext = { mode: 'travel_request' };
+    chatInputLocked = false;
+    lastPaymentHandledRef = null;
+    resultSelectionInProgress = false;
+    try { if (input) input.value = ''; } catch (e) {}
+  }
+
+  function placeholderForContext(){
+    const ctx = (chatState && chatState.inputContext) || {};
+    if (chatInputLocked || ctx.mode === 'completed') return 'Booking completed. Start a new booking to continue.';
+    if (ctx.mode === 'flight_option') return 'Select flight option. Examples: Option 1 or just 1';
+    if (ctx.mode === 'fare_option') {
+      if (String(ctx.trip_type || 'ONE_WAY') === 'ROUND_TRIP') {
+        try {
+          const parent = getActiveFareParent();
+          const status = roundTripFareSelectionStatus(parent);
+          if (status.outboundSelected && !status.returnSelected) return 'Select remaining return fare. Examples: Return Option 1, Return Economy Flex, Return Eco Flex, Return Flex';
+          if (status.returnSelected && !status.outboundSelected) return 'Select remaining outbound fare. Examples: Outbound Option 1, Outbound Economy Flex, Outbound Eco Flex, Outbound Flex';
+        } catch (e) {}
+        return 'Select fare. Examples: Outbound Option 1, Outbound Economy Flex, Outbound Eco Flex, Outbound Flex';
+      }
+      return 'Select fare. Examples: Option 1, Economy Flex, Eco Flex, Flex';
+    }
+    if (ctx.mode === 'traveler_action') return 'Please use one of the traveller options above to continue. Choose "Use Saved Travellers" to select from your saved traveller records, or "Manage Traveller Docs" to review and update traveller details first.';
+    if (ctx.mode === 'traveler_select') return 'Please select the required traveller(s) from the list above, then click "Confirm Traveller Selection" to continue.';
+    if (ctx.mode === 'traveler_review') return 'Please review the traveller selection message above and choose either "Yes, Continue" to proceed with the current selection or "No, Adjust Selection" to make changes.';
+    if (ctx.mode === 'booking_review') return 'Please click "Confirm Booking" or "Start New Search" above to continue.';
+    if (ctx.mode === 'payment_pending') return 'Please click "Proceed to Payment" above to complete payment and continue.';
+    if (ctx.mode === 'missing_fields_review') return 'Please use the correction fields above, then click Continue Search.';
+    return 'Type your travel request here...';
+  }
+
+  function refreshInputPlaceholder(){
+    input.placeholder = placeholderForContext();
+  }
+
+  function setInputContext(mode, extra){
+    chatState.inputContext = Object.assign({ mode: String(mode || 'travel_request') }, extra || {});
+    saveState();
+    const ctxMode = String((chatState.inputContext && chatState.inputContext.mode) || 'travel_request');
+    const buttonLockedModes = new Set(['traveler_action', 'traveler_select', 'traveler_review', 'booking_review', 'payment_pending', 'missing_fields_review']);
+    if (ctxMode === 'completed') {
+      input.title = 'Booking is completed. Start a new booking to continue.';
+      setChatInputLocked(true);
+      return;
+    }
+    if (buttonLockedModes.has(ctxMode)) {
+      input.disabled = true;
+      input.title = 'Input is disabled for this step. Please use the button/action above.';
+      btn.disabled = true;
+      refreshInputPlaceholder();
+      btn.textContent = 'Use Buttons Above';
+      return;
+    }
+    if (!chatInputLocked) {
+      input.disabled = false;
+      input.title = '';
+      btn.disabled = false;
+      btn.textContent = 'Send';
+      refreshInputPlaceholder();
+    }
+  }
+
+  function clearInputContext(mode){
+    const current = (chatState && chatState.inputContext && chatState.inputContext.mode) || 'travel_request';
+    if (!mode || current === mode) setInputContext('travel_request');
+  }
+
+  function resetSearchSelectionState(){
+    chatState.pendingMissingField = null;
+    chatState.lastSearchResults = null;
+    chatState.visibleFlightResults = null;
+    chatState.selectedResult = null;
+    chatState.selectedFareStage = null;
+    chatState.selectedTravelerStage = null;
+    chatState.bookingSummaryStage = null;
+    setInputContext('travel_request');
+    saveState();
+  }
+
+  function looksLikeNewTravelRequest(text){
+    const raw = String(text || '').trim().toLowerCase();
+    if (!raw) return false;
+    if (/^option\s*#?\s*\d+$/i.test(raw) || /^\d+$/.test(raw)) return false;
+    return /\b(book|flight|return|round\s*trip|one\s*way|multi\s*city|from|to|adult|child|infant|currency|cabin|depart|departure|travel|mumbai|manama|bahrain|dubai)\b/i.test(raw);
+  }
+
+  function isButtonLockedContext(){
+    const ctxMode = String((chatState.inputContext && chatState.inputContext.mode) || 'travel_request');
+    return ['traveler_action', 'traveler_select', 'traveler_review', 'booking_review', 'payment_pending', 'missing_fields_review'].includes(ctxMode);
+  }
+
+  function setChatInputLocked(isLocked){
+    chatInputLocked = !!isLocked;
+    if (chatInputLocked) {
+      input.disabled = true;
+      btn.disabled = true;
+      btn.textContent = 'Completed';
+      refreshInputPlaceholder();
+      return;
+    }
+    if (isButtonLockedContext()) {
+      input.disabled = true;
+      btn.disabled = true;
+      btn.textContent = 'Use Buttons Above';
+      refreshInputPlaceholder();
+      return;
+    }
+    input.disabled = false;
+    btn.disabled = false;
+    refreshInputPlaceholder();
+    btn.textContent = 'Send';
+  }
+
+  function escapeHtml(value){
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function planeBusyMarkup(message, compact){
+    const safeMessage = escapeHtml(message || 'Please wait, I am reviewing your request...');
+    return `
+      <div class="llm-plane-loader ${compact ? 'compact' : ''}" aria-live="polite" aria-label="${safeMessage}">
+        <div class="llm-plane-sky" aria-hidden="true">
+          <div class="llm-plane-trail"></div>
+          <div class="llm-plane-icon">✈</div>
+        </div>
+        <div class="llm-plane-text">${safeMessage}</div>
+      </div>`;
+  }
+
+  function showBusyIndicator(){
+    if (typingMessageEl) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'msg msg-assistant msg-typing';
+    wrap.innerHTML = '<div class="msg-role">Assistant</div><div class="msg-body"></div>' + planeBusyMarkup('Please wait, I am reviewing your travel request...', true);
+    typingMessageEl = wrap;
+    box.appendChild(wrap);
+    scrollBottom();
+  }
+
+  function hideBusyIndicator(){
+    if (!typingMessageEl) return;
+    if (typingMessageEl.parentNode) typingMessageEl.parentNode.removeChild(typingMessageEl);
+    typingMessageEl = null;
+  }
+
+  function llmPause(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function showAssistantThinkingFor(ms){
+    showBusyIndicator();
+    try {
+      await llmPause(ms || 1000);
+    } finally {
+      hideBusyIndicator();
+    }
+  }
+
+  async function showAssistantThinkingTextFor(text, ms){
+    hideBusyIndicator();
+    const wrap = document.createElement('div');
+    wrap.className = 'msg msg-assistant msg-typing';
+
+    const role = document.createElement('div');
+    role.className = 'msg-role';
+    role.textContent = 'Assistant';
+
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    body.textContent = text || 'Working on it...';
+
+    const loader = document.createElement('div');
+    loader.innerHTML = planeBusyMarkup(text || 'Working on it...', false);
+
+    wrap.appendChild(role);
+    wrap.appendChild(body);
+    wrap.appendChild(loader.firstElementChild);
+    typingMessageEl = wrap;
+    box.appendChild(wrap);
+    scrollBottom();
+    try {
+      await llmPause(ms || 1000);
+    } finally {
+      hideBusyIndicator();
+    }
+  }
+
+  function setBusy(isBusy){
+    const buttonLocked = isButtonLockedContext();
+    btn.disabled = isBusy || chatInputLocked || buttonLocked;
+    input.disabled = isBusy || chatInputLocked || buttonLocked;
+    btn.textContent = chatInputLocked ? 'Completed' : (buttonLocked ? 'Use Buttons Above' : 'Send');
+    refreshInputPlaceholder();
+    if (chatInputLocked || buttonLocked || !isBusy) hideBusyIndicator();
+    else showBusyIndicator();
+  }
+
+  function parseTypedFlightOption(text){
+    const raw = String(text || '').trim();
+    if (!raw) return null;
+    let match = raw.match(/^(?:select\s+)?option\s*#?\s*(\d+)$/i);
+    if (!match) match = raw.match(/^#?(\d+)$/);
+    if (!match) return null;
+    const optionNumber = Number(match[1] || 0);
+    return Number.isFinite(optionNumber) && optionNumber > 0 ? optionNumber : null;
+  }
+
+  function normalizeFareText(value){
+    return String(value || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function resolveFareFamilyOption(listEl, rawText){
+    if (!listEl) return null;
+    const text = normalizeFareText(rawText);
+    if (!text) return null;
+
+    const cards = Array.from(listEl.querySelectorAll('.llm-fare-card'));
+    if (!cards.length) return null;
+
+    const familySpecs = [
+      { canon: 'flex', aliases: ['economy flex', 'eco flex', 'flex'] },
+      { canon: 'smart', aliases: ['economy smart', 'eco smart', 'smart'] },
+      { canon: 'light', aliases: ['economy light', 'eco light', 'light'] },
+      { canon: 'economy', aliases: ['economy', 'eco'] }
+    ];
+
+    const matchedSpec = familySpecs.find((spec) => spec.aliases.some((alias) => text === alias || text.includes(alias)));
+    if (!matchedSpec) return null;
+
+    const matchedIndex = cards.findIndex((card) => normalizeFareText(card.dataset.family || '').includes(matchedSpec.canon));
+    if (matchedIndex >= 0) {
+      return { optionNumber: matchedIndex + 1, matchedFamily: matchedSpec.canon };
+    }
+
+    if (matchedSpec.canon === 'economy' && cards.length === 1) {
+      return { optionNumber: 1, matchedFamily: matchedSpec.canon };
+    }
+
+    return null;
+  }
+
+  function parseTypedFareOption(text, context){
+    const raw = String(text || '').trim();
+    if (!raw) return null;
+    const ctx = context || {};
+    const tripType = String(ctx.trip_type || 'ONE_WAY');
+    const toPositive = (value) => { const n = Number(value || 0); return Number.isFinite(n) && n > 0 ? n : null; };
+    const activeParent = getActiveFareParent();
+
+    if (tripType === 'ROUND_TRIP') {
+      let match = raw.match(/^(outbound|return)\s+(?:fare\s+)?option\s*#?\s*(\d+)$/i);
+      if (!match) match = raw.match(/^(outbound|return)\s+#?(\d+)$/i);
+      if (match) return { side: String(match[1] || '').toLowerCase(), optionNumber: toPositive(match[2]) };
+
+      const normalizedRaw = normalizeFareText(raw);
+      const side = normalizedRaw.startsWith('return ') ? 'return' : (normalizedRaw.startsWith('outbound ') ? 'outbound' : null);
+      if (!side) return null;
+      const familyText = normalizedRaw.replace(/^(outbound|return)\s+/, '').trim();
+      const listEl = getFareListForSide(activeParent, side);
+      const familyMatch = resolveFareFamilyOption(listEl, familyText);
+      return familyMatch ? { side, optionNumber: familyMatch.optionNumber, matchedFamily: familyMatch.matchedFamily } : null;
+    }
+
+    let match = raw.match(/^(?:select\s+)?(?:fare\s+)?option\s*#?\s*(\d+)$/i);
+    if (!match) match = raw.match(/^#?(\d+)$/);
+    if (match) {
+      const optionNumber = toPositive(match[1]);
+      return optionNumber ? { side: 'outbound', optionNumber } : null;
+    }
+
+    const listEl = getFareListForSide(activeParent, 'outbound');
+    const familyMatch = resolveFareFamilyOption(listEl, raw);
+    return familyMatch ? { side: 'outbound', optionNumber: familyMatch.optionNumber, matchedFamily: familyMatch.matchedFamily } : null;
+  }
+
+  function fareOptionHintForSide(side, count){
+    const safeSide = side === 'return' ? 'Return' : 'Outbound';
+    return `${safeSide} Option 1, ${safeSide} Economy Flex, ${safeSide} Eco Flex, or ${safeSide} Flex`;
+  }
+
+  function roundTripFareSelectionStatus(parent){
+    const outboundSelected = !!(parent && parent.dataset && parent.dataset.llmManualOutbound === '1');
+    const returnSelected = !!(parent && parent.dataset && parent.dataset.llmManualReturn === '1');
+    const outboundList = getFareListForSide(parent, 'outbound');
+    const returnList = getFareListForSide(parent, 'return');
+    const outboundCount = outboundList ? outboundList.querySelectorAll('.llm-fare-card').length : 0;
+    const returnCount = returnList ? returnList.querySelectorAll('.llm-fare-card').length : 0;
+    return { outboundSelected, returnSelected, outboundCount, returnCount };
+  }
+
+  function invalidFareOptionMessage(){
+    const ctx = (chatState && chatState.inputContext) || {};
+    if (String(ctx.trip_type || 'ONE_WAY') === 'ROUND_TRIP') {
+      const parent = getActiveFareParent();
+      const status = roundTripFareSelectionStatus(parent);
+      if (status.outboundSelected && !status.returnSelected) {
+        return `I could not match that return fare option. Your outbound fare is already selected. Please type ${fareOptionHintForSide('return', status.returnCount)}.`;
+      }
+      if (status.returnSelected && !status.outboundSelected) {
+        return `I could not match that outbound fare option. Your return fare is already selected. Please type ${fareOptionHintForSide('outbound', status.outboundCount)}.`;
+      }
+      return `I could not match that fare option. Please type ${fareOptionHintForSide('outbound', status.outboundCount)}. For return fare, type ${fareOptionHintForSide('return', status.returnCount)}.`;
+    }
+    const count = Number(ctx.option_count || 0);
+    if (count > 0) return 'I could not match that fare option. Please type Option 1, Economy Flex, Eco Flex, or Flex.';
+    return 'I could not match that fare option. Please type Option 1, Economy Flex, Eco Flex, or Flex.';
+  }
+
+  function getActiveFareParent(){
+    const parents = Array.from(document.querySelectorAll('.llm-fare-parent'));
+    return parents.length ? parents[parents.length - 1] : null;
+  }
+
+  function getFareListForSide(parent, side){
+    if (!parent) return null;
+    const blocks = Array.from(parent.querySelectorAll('.llm-fare-block'));
+    for (const block of blocks) {
+      const titleEl = block.querySelector('.llm-fare-block-title');
+      const listEl = block.querySelector('.llm-fare-list');
+      const title = String(titleEl ? titleEl.textContent || '' : '').toLowerCase();
+      if (side === 'return' && title.includes('return')) return listEl;
+      if (side === 'outbound' && title.includes('outbound')) return listEl;
+    }
+    return null;
+  }
+
+  function handleTypedFareOption(text){
+    const ctx = (chatState && chatState.inputContext) || {};
+    const parsed = parseTypedFareOption(text, ctx);
+    if (!parsed || !parsed.optionNumber) {
+      appendMessage('assistant', invalidFareOptionMessage());
+      return true;
+    }
+    const parent = getActiveFareParent();
+    const listEl = getFareListForSide(parent, parsed.side || 'outbound');
+    const cards = Array.from(listEl ? listEl.querySelectorAll('.llm-fare-card') : []);
+    const target = cards[parsed.optionNumber - 1];
+    if (!target) {
+      appendMessage('assistant', invalidFareOptionMessage());
+      return true;
+    }
+
+    const tripType = String(ctx.trip_type || 'ONE_WAY');
+    if (tripType === 'ROUND_TRIP') {
+      const status = roundTripFareSelectionStatus(parent);
+      if (parsed.side === 'outbound' && status.outboundSelected && !status.returnSelected) {
+        appendMessage('assistant', `Your outbound fare is already selected. Please select the remaining return fare option. Type ${fareOptionHintForSide('return', status.returnCount)}.`);
+        return true;
+      }
+      if (parsed.side === 'return' && status.returnSelected && !status.outboundSelected) {
+        appendMessage('assistant', `Your return fare is already selected. Please select the remaining outbound fare option. Type ${fareOptionHintForSide('outbound', status.outboundCount)}.`);
+        return true;
+      }
+    }
+
+    const actualOptionNumber = Math.max(1, cards.indexOf(target) + 1);
+    target.click();
+
+    const family = String(target.dataset.family || '').trim();
+    const currency = String(target.dataset.currency || '').trim();
+    const total = Number(target.dataset.total || 0);
+    const optionLabel = `Option ${actualOptionNumber}`;
+    const fareText = family ? family : 'selected fare';
+
+    let reply = '';
+    let shouldMoveTravelerShell = false;
+
+    if (tripType === 'ROUND_TRIP') {
+      const sideLabel = parsed.side === 'return' ? 'Return' : 'Outbound';
+      reply = `You have selected ${sideLabel} ${optionLabel}${family ? ` — ${fareText}` : ''}.`;
+      const outboundCount = Number(ctx.option_count || 0);
+      const returnCount = Number(ctx.return_option_count || 0);
+      const manualOutbound = parent && parent.dataset && parent.dataset.llmManualOutbound === '1';
+      const manualReturn = parent && parent.dataset && parent.dataset.llmManualReturn === '1';
+      const bothRoundTripFaresSelected = Boolean(manualOutbound && manualReturn);
+      if (!bothRoundTripFaresSelected) {
+        const remainingSide = parsed.side === 'return' ? 'outbound' : 'return';
+        reply += ` Please continue with the remaining ${remainingSide} fare selection.`;
+      } else {
+        reply += ' Please continue with traveller selection. click on below button "Use Saved Travellers" to choose from your saved traveller list, or "Manage Traveller Docs" to review and update traveller details first.';
+        shouldMoveTravelerShell = true;
+      }
+    } else {
+      const totalText = Number.isFinite(total) && total > 0 ? ` (${formatMoney(currency, total, 2)})` : '';
+      reply = `You have selected ${optionLabel}${family ? ` — ${fareText}` : ''}${totalText}. Please continue with traveller selection. click on below button "Use Saved Travellers" to choose from your saved traveller list, or "Manage Traveller Docs" to review and update traveller details first.`;
+      shouldMoveTravelerShell = true;
+    }
+
+    let travelerShell = null;
+    if (shouldMoveTravelerShell) {
+      setInputContext('traveler_action');
+      const allTravelerShells = Array.from(document.querySelectorAll('.llm-traveler-shell'));
+      travelerShell = allTravelerShells.length ? allTravelerShells[allTravelerShells.length - 1] : null;
+      if (travelerShell && travelerShell.parentNode) {
+        travelerShell.parentNode.removeChild(travelerShell);
+      }
+    }
+
+    appendMessage('assistant', reply, null, (wrap) => {
+      if (shouldMoveTravelerShell && travelerShell) {
+        travelerShell.style.display = '';
+        wrap.appendChild(travelerShell);
+      }
+    });
+    return true;
+  }
+
+  function getSearchResultsList(){
+    return Array.isArray(chatState.lastSearchResults && chatState.lastSearchResults.results) ? chatState.lastSearchResults.results : [];
+  }
+
+  function getVisibleFlightResultsList(){
+    return Array.isArray(chatState.visibleFlightResults)
+      ? chatState.visibleFlightResults
+      : getSearchResultsList();
+  }
+
+  function extractOptionNumberFromLabel(label){
+    const raw = String(label || '').trim();
+    if (!raw) return null;
+    const match = raw.match(/option\s*#?\s*(\d+)/i);
+    if (!match) return null;
+    const n = Number(match[1] || 0);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function optionCabinFromCard(card){
+    const rawLabel = String(card && card.option_label || '').trim();
+    const dotPos = rawLabel.indexOf('·');
+    if (dotPos >= 0) {
+      const labelCabin = rawLabel.slice(dotPos + 1).trim();
+      if (labelCabin) return labelCabin;
+    }
+    const out = card && card.outbound ? card.outbound : {};
+    const ret = card && card.return_leg ? card.return_leg : {};
+    const outCabin = String(out.cabin_class || out.travel_class || '').trim();
+    const retCabin = String(ret.cabin_class || ret.travel_class || '').trim();
+    if (outCabin && retCabin && outCabin.toUpperCase() !== retCabin.toUpperCase()) return `${outCabin} / ${retCabin}`;
+    return outCabin || retCabin || String(card && (card.cabin_class || card.travel_class) || '').trim() || 'Economy';
+  }
+
+  function displayOptionLabel(card, idx){
+    const visibleNumber = Number(idx || 0) + 1;
+    return `Option ${visibleNumber} · ${optionCabinFromCard(card)}`;
+  }
+
+  function findFlightOptionCardByNumber(optionNumber){
+    const results = getVisibleFlightResultsList();
+    if (!results.length || !Number.isFinite(optionNumber) || optionNumber < 1) return null;
+    return results[optionNumber - 1] || null;
+  }
+
+  function invalidFlightOptionMessage(){
+    const results = getVisibleFlightResultsList();
+    const labels = results.slice(0, 3).map((card, idx) => displayOptionLabel(card, idx)).filter(Boolean);
+    const hint = labels.length ? ` Kindly type ${labels.join(' or ')}${results.length > 3 ? ' etc.' : '.'}` : ' Kindly type Option 1 or Option 2 for example.';
+    return `I could not match that flight option.${hint}`;
+  }
+
+  function appendMessage(role, text, summary, extrasBuilder){
+    const wrap = document.createElement('div');
+    wrap.className = role === 'user' ? 'msg msg-user' : 'msg msg-assistant';
+    wrap.innerHTML = '<div class="msg-role"></div><div class="msg-body"></div>';
+    wrap.querySelector('.msg-role').textContent = role === 'user' ? 'You' : 'Assistant';
+    wrap.querySelector('.msg-body').textContent = text || '';
+    if (summary && Object.keys(summary).length) {
+      const grid = document.createElement('div');
+      grid.className = 'assist-grid';
+      Object.entries(summary).forEach(([k,v]) => {
+        if (v === null || v === undefined || v === '') return;
+        const item = document.createElement('div');
+        item.className = 'assist-item';
+        item.innerHTML = '<div class="assist-key"></div><div class="assist-val"></div>';
+        item.querySelector('.assist-key').textContent = k;
+        item.querySelector('.assist-val').textContent = String(v);
+        grid.appendChild(item);
+      });
+      if (grid.children.length) wrap.appendChild(grid);
+    }
+    if (typeof extrasBuilder === 'function') {
+      extrasBuilder(wrap);
+    }
+    box.appendChild(wrap);
+    scrollBottom();
+    return wrap;
+  }
+
+  function buildSummary(data){
+    const ni = data && data.normalized_intent ? data.normalized_intent : null;
+    if (!ni) return null;
+    return {
+      'Trip Type': formatTripType(ni.trip_type || 'ONE_WAY'),
+      'From': ni.from_city || '',
+      'To': ni.to_city || '',
+      'Departure Date': formatShortDate(ni.depart_date || ''),
+      'Return Date': formatShortDate(ni.return_date || ''),
+      'Cabin Class': ni.cabin_class || '',
+      'Currency': ni.currency || '',
+      'Travellers': [ni.adults ? `${ni.adults} Adult${Number(ni.adults) > 1 ? 's' : ''}` : '', ni.children ? `${ni.children} Child${Number(ni.children) > 1 ? 'ren' : ''}` : '', ni.infants ? `${ni.infants} Infant${Number(ni.infants) > 1 ? 's' : ''}` : ''].filter(Boolean).join(', '),
+      'Preferred Airline': ni.preferred_airline || ''
+    };
+  }
+
+  function currentMissingField(){
+    const pending = chatState.pendingMissingField;
+    if (!pending || !Array.isArray(pending.missingFields) || !pending.missingFields.length) return null;
+    return pending.missingFields[0];
+  }
+  function rememberPendingMissingField(data){
+    chatState.pendingMissingField = {
+      missingFields: Array.isArray(data && data.missing_fields) ? data.missing_fields : [],
+      routePayload: (data && data.route_payload) ? data.route_payload : (chatState.lastRoutePayload || {})
+    };
+    chatState.lastRoutePayload = chatState.pendingMissingField.routePayload;
+    saveState();
+  }
+  function clearPendingMissingField(){ chatState.pendingMissingField = null; saveState(); }
+  function fieldReplyHint(field){ return (field && field.hint) ? String(field.hint) : ''; }
+  function missingFieldPrompt(field){ return String((field && field.prompt) || 'Please provide the next missing detail.').replace(/\{options\}/g, '').replace(/\*{3,}/g, '').trim(); }
+  function getPendingMissingFields(){ return Array.isArray(chatState.pendingMissingField && chatState.pendingMissingField.missingFields) ? chatState.pendingMissingField.missingFields : []; }
+  function friendlyMissingLabel(field){
+    const key = String((field && (field.route_key || field.name)) || '').trim();
+    if (key === 'from_city') return 'Departure Airport';
+    if (key === 'to_city') return 'Arrival Airport';
+    if (key === 'depart_date') return 'Departure Date';
+    if (key === 'return_date') return 'Return Date';
+    if (key === 'cabin_class') return 'Cabin Class';
+    if (key === 'currency') return 'Currency';
+    if (key === 'preferred_airline') return 'Preferred Airline';
+    return String((field && field.label) || key || 'Detail').trim();
+  }
+  function sourceValueForField(field){
+    const ni = chatState.lastNormalizedIntent || {};
+    const key = String((field && (field.route_key || field.name)) || '').trim();
+    if (key === 'from_city') return String(ni.from_city || '').trim();
+    if (key === 'to_city') return String(ni.to_city || '').trim();
+    if (key === 'depart_date') return String(ni.depart_date_raw || ni.depart_date || '').trim();
+    if (key === 'return_date') return String(ni.return_date_raw || ni.return_date || '').trim();
+    if (key === 'cabin_class') return String(ni.cabin_class || '').trim();
+    if (key === 'currency') return String(ni.currency || '').trim();
+    if (key === 'preferred_airline') return String(ni.preferred_airline || '').trim();
+    return '';
+  }
+  function correctionIntroMessage(){
+    const fields = getPendingMissingFields();
+    const hasInvalid = fields.some(f => !!sourceValueForField(f));
+    if (hasInvalid) return 'I understood part of your request, but a few details need correction before I can continue.';
+    return 'Please review and complete all these details before I continue.';
+  }
+  function correctionStatusText(field){
+    const raw = sourceValueForField(field);
+    if (raw) return `I could not match "${raw}".`;
+    return 'Not provided yet.';
+  }
+  function buildAcceptedDetailsForCorrection(){
+    const ni = chatState.lastNormalizedIntent || {};
+    const pendingKeys = new Set(getPendingMissingFields().map(f => String((f && (f.route_key || f.name)) || '').trim()));
+    const out = {};
+    const add = (label, value) => {
+      const cleaned = String(value || '').trim();
+      if (!cleaned) return;
+      out[label] = cleaned;
+    };
+
+    if (!pendingKeys.has('from_city')) add('From City/Airport', ni.from_city || '');
+    if (!pendingKeys.has('to_city')) add('To City/Airport', ni.to_city || '');
+    if (!pendingKeys.has('trip_type')) add('Trip Type', formatTripType(ni.trip_type || 'ONE_WAY'));
+    if (!pendingKeys.has('depart_date')) add('Departure Date', formatShortDate(ni.depart_date || ''));
+    if (!pendingKeys.has('return_date') && String(ni.trip_type || '').toUpperCase() === 'ROUND_TRIP') add('Return Date', formatShortDate(ni.return_date || ''));
+    if (!pendingKeys.has('cabin_class')) add('Cabin Class', ni.cabin_class || '');
+    if (!pendingKeys.has('currency')) add('Currency', ni.currency || '');
+    if (!pendingKeys.has('preferred_airline')) add('Preferred Airline', ni.preferred_airline || '');
+
+    const travelers = [
+      ni.adults ? `${ni.adults} Adult${Number(ni.adults) > 1 ? 's' : ''}` : '',
+      ni.children ? `${ni.children} Child${Number(ni.children) > 1 ? 'ren' : ''}` : '',
+      ni.infants ? `${ni.infants} Infant${Number(ni.infants) > 1 ? 's' : ''}` : ''
+    ].filter(Boolean).join(', ');
+    if (travelers) out['Travellers'] = travelers;
+    return out;
+  }
+  function clearExistingCorrectionCards(){
+    document.querySelectorAll('.llm-correction-card').forEach((el) => { if (el && el.parentNode) el.parentNode.removeChild(el); });
+  }
+
+  function providerConnectionMessage(rawText){
+    const text = String(rawText || '').trim();
+    const lower = text.toLowerCase();
+    const providerName = PROVIDER_NAME || PROVIDER_CODE || 'the selected LLM provider';
+    const hints = ['http 503','temporarily unavailable','connection refused','timed out','timeout','quota','billing','rate limit'];
+    if (hints.some(h => lower.includes(h))) return `Unable to connect to ${providerName}. Please try again later.`;
+    return text;
+  }
+
+  function extractBookingRef(value){
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    let match = raw.match(/booking_ref=([A-Za-z0-9_-]+)/i);
+    if (match && match[1]) return String(match[1]).trim();
+    match = raw.match(/\bRef:\s*([A-Za-z0-9_-]+)\b/i);
+    if (match && match[1]) return String(match[1]).trim();
+    match = raw.match(/\b([A-Z0-9]{6,})\b/);
+    if (match && match[1]) return String(match[1]).trim();
+    return '';
+  }
+
+  function resolveBookingSummaryUrl(payload){
+    const candidates = [
+      payload && payload.view_booking_url,
+      payload && payload.manage_booking_url,
+      payload && payload.booking_summary_url,
+      payload && payload.payment_url,
+      payload && payload.user_message,
+      payload && payload.booking_ref
+    ];
+    for (const candidate of candidates) {
+      const raw = String(candidate || '').trim();
+      if (!raw) continue;
+      if (/\/portal\/flight\/booking-summary\?booking_ref=.+/i.test(raw)) return raw;
+      const ref = extractBookingRef(raw);
+      if (ref) return `/portal/flight/booking-summary?booking_ref=${encodeURIComponent(ref)}`;
+    }
+    return '#';
+  }
+
+  async function handleJsonResponse(resp){
+    const contentType = resp.headers.get('content-type') || '';
+    if (!resp.ok) {
+      if (contentType.includes('application/json')) {
+        const err = await resp.json();
+        const msg = err.user_message || err.detail || err.message || (Array.isArray(err.errors) ? err.errors.join('\n') : 'Unable to process your request right now.');
+        throw new Error(providerConnectionMessage(msg));
+      }
+      throw new Error('Active application session not found. Please sign in again.');
+    }
+    if (!contentType.includes('application/json')) throw new Error(`Unexpected non-JSON response returned (HTTP ${resp.status}).`);
+    const data = await resp.json();
+    if (data && data.status === 'FAILED') throw new Error(providerConnectionMessage(data.user_message || (Array.isArray(data.errors) ? data.errors.join('\n') : 'Unable to process your request right now.')));
+    return data;
+  }
+
+  async function callIntent(text){
+    const resp = await fetch('/portal/llm/intent', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ message:text, today_date:TODAY_DATE, provider_code:PROVIDER_CODE })});
+    return handleJsonResponse(resp);
+  }
+  async function callResume(fieldName, value, routePayload){
+    const resp = await fetch('/portal/llm/resume', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ route_payload: routePayload || {}, field_name: fieldName, value: value, provider_code: PROVIDER_CODE })});
+    return handleJsonResponse(resp);
+  }
+  async function callConfirmDate(originalMessage, selectedDate){
+    const resp = await fetch('/portal/llm/confirm-date', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ message:originalMessage, today_date:TODAY_DATE, selected_date:selectedDate, provider_code:PROVIDER_CODE, normalized_intent: chatState.lastNormalizedIntent || null, route_payload: chatState.lastRoutePayload || null })});
+    return handleJsonResponse(resp);
+  }
+  async function routeToSearch(routePayload){
+    const resp = await fetch('/portal/llm/route-to-search', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ route_payload: routePayload, confirmed:true })});
+    const data = await handleJsonResponse(resp);
+    if (data && data.status === 'MISSING_REQUIRED_FIELDS') {
+      clearInputContext('flight_option');
+      rememberPendingMissingField(data);
+      const field = currentMissingField();
+      appendAssistantFieldPrompt(field, null);
+      return;
+    }
+    if (data && data.status === 'SEARCH_RESULTS') {
+      const resultCount = Number(data.result_count || 0);
+      const hasResults = Array.isArray(data.results) && data.results.length > 0 && resultCount > 0;
+      if (hasResults) {
+        chatState.lastSearchResults = data;
+        saveState();
+      } else {
+        chatState.lastSearchResults = null;
+        chatState.visibleFlightResults = null;
+        chatState.selectedResult = null;
+        saveState();
+      }
+      hideBusyIndicator();
+      await showAssistantThinkingTextFor('Hold on, we are fetching available flights for you', 10000);
+      appendAssistantResults(data);
+      return;
+    }
+    throw new Error('Unexpected response returned while routing to search.');
+  }
+
+  async function callFareOptions(agentFsrId, selectedResult){
+    const resp = await fetch('/portal/llm/fare-options', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ agent_fsr_id: agentFsrId, selected_result: selectedResult || {} })});
+    return handleJsonResponse(resp);
+  }
+
+  async function callTravelers(agentFsrId){
+    const resp = await fetch('/portal/llm/travelers', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ agent_fsr_id: agentFsrId })});
+    return handleJsonResponse(resp);
+  }
+
+  async function callTravelerSelection(agentFsrId, selectedDocumentIds, selection, allowMismatchOverride){
+    const resp = await fetch('/portal/llm/traveler-selection', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ agent_fsr_id: agentFsrId, selected_document_ids: selectedDocumentIds || [], selection: selection || {}, allow_mismatch_override: !!allowMismatchOverride })});
+    return handleJsonResponse(resp);
+  }
+
+
+
+  async function callBookingPreview(agentFsrId, selectedDocumentIds, selection){
+    const resp = await fetch('/portal/llm/booking-preview', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ agent_fsr_id: agentFsrId, selected_document_ids: selectedDocumentIds || [], selection: selection || {} })});
+    return handleJsonResponse(resp);
+  }
+
+  async function callBookingConfirm(agentFsrId, selectedDocumentIds, selection){
+    const resp = await fetch('/portal/llm/booking-confirm', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ agent_fsr_id: agentFsrId, selected_document_ids: selectedDocumentIds || [], selection: selection || {} })});
+    return handleJsonResponse(resp);
+  }
+
+  async function callBookingStatus(bookingRef){
+    const resp = await fetch('/portal/llm/booking-status', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ booking_ref: bookingRef })});
+    return handleJsonResponse(resp);
+  }
+
+  function parseFlexibleDateInput(text){
+    const raw = String(text || '').trim(); if (!raw) return null;
+    const t = raw.toLowerCase().replace(/,/g,' ').replace(/\s+/g,' ').trim();
+    function ymd(d){ const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'); return `${yyyy}-${mm}-${dd}`; }
+    const today = new Date(TODAY_DATE + 'T00:00:00');
+    const clean = t.replace('tomorow','tomorrow');
+    if (clean === 'today') return ymd(today);
+    if (clean.includes('day after tomorrow')) { const d=new Date(today); d.setDate(d.getDate()+2); return ymd(d); }
+    if (clean.includes('tomorrow')) { const d=new Date(today); d.setDate(d.getDate()+1); return ymd(d); }
+    let m = clean.match(/(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+    m = clean.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/); if (m) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+    m = clean.match(/(\d{1,2})[- ]([a-z]{3})[- ](\d{4})/); if (m) { const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'}; const mon=months[m[2].slice(0,3)]; if (mon) return `${m[3]}-${mon}-${String(m[1]).padStart(2,'0')}`; }
+    return null;
+  }
+
+  function resolveMissingFieldAnswer(text, field){
+    const raw = String(text || '').trim();
+    if (!field || !raw) return null;
+    const key = String(field.route_key || field.name || '').trim();
+    if (key === 'depart_date' || key === 'return_date') return parseFlexibleDateInput(raw);
+    const options = Array.isArray(field.options) ? field.options : [];
+    if (options.length) {
+      const needle = raw.toLowerCase();
+      const exact = options.find(opt => {
+        const value = String(opt.value || '').trim().toLowerCase();
+        const label = String(opt.label || '').trim().toLowerCase();
+        return needle === value || needle === label || label.startsWith(needle) || value.startsWith(needle) || label.includes(needle);
+      });
+      if (exact) return exact.value || exact.label;
+      if (key === 'from_city' || key === 'to_city') return raw;
+      return null;
+    }
+    return raw;
+  }
+
+  function appendAssistantFieldPrompt(field, summary){
+    clearExistingCorrectionCards();
+    setInputContext('missing_fields_review');
+    const fields = getPendingMissingFields();
+    appendMessage('assistant', 'I understood part of your request. Here are the details of your trip.', null, (wrap) => {
+      wrap.classList.add('llm-correction-card');
+      const accepted = buildAcceptedDetailsForCorrection();
+      if (Object.keys(accepted).length) {
+        const acceptedTitle = document.createElement('div');
+        acceptedTitle.className = 'llm-parent-title';
+        acceptedTitle.style.marginBottom = '8px';
+        acceptedTitle.textContent = 'Recognized Trip Details';
+        wrap.appendChild(acceptedTitle);
+
+        const acceptedGrid = document.createElement('div');
+        acceptedGrid.className = 'assist-grid';
+        Object.entries(accepted).forEach(([k,v]) => {
+          const item = document.createElement('div');
+          item.className = 'assist-item';
+          item.innerHTML = '<div class="assist-key"></div><div class="assist-val"></div>';
+          item.querySelector('.assist-key').textContent = k;
+          item.querySelector('.assist-val').textContent = String(v);
+          acceptedGrid.appendChild(item);
+        });
+        wrap.appendChild(acceptedGrid);
+      }
+
+      const reviewMsg = document.createElement('div');
+      reviewMsg.className = 'msg-body';
+      reviewMsg.style.marginTop = Object.keys(accepted).length ? '10px' : '0';
+      reviewMsg.textContent = 'Please review and correct the incomplete details before I can continue.';
+      wrap.appendChild(reviewMsg);
+
+      const card = document.createElement('div');
+      card.className = 'llm-parent-card';
+      const title = document.createElement('div');
+      title.className = 'llm-parent-title';
+      title.textContent = 'Please review and complete all these details';
+      card.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'assist-grid';
+      (fields.length ? fields : (field ? [field] : [])).forEach((pendingField) => {
+        const boxEl = document.createElement('div');
+        boxEl.className = 'assist-item';
+        const keyEl = document.createElement('div');
+        keyEl.className = 'assist-key';
+        keyEl.textContent = friendlyMissingLabel(pendingField);
+        boxEl.appendChild(keyEl);
+        const valEl = document.createElement('div');
+        valEl.className = 'assist-val';
+        valEl.textContent = correctionStatusText(pendingField);
+        boxEl.appendChild(valEl);
+
+        const form = document.createElement('div');
+        form.className = 'assist-inline-form';
+        const options = Array.isArray(pendingField.options) ? pendingField.options : [];
+        const hasOptions = options.length > 0 && pendingField.ui_mode === 'DROPDOWN';
+        let control = null;
+        if (hasOptions) {
+          const sel = document.createElement('select');
+          sel.className = 'assist-select';
+          sel.innerHTML = '<option value="">Select an option</option>' + options.map(opt => `<option value="${String(opt.value).replace(/"/g,'&quot;')}">${opt.label || opt.value}</option>`).join('');
+          form.appendChild(sel);
+          control = sel;
+        } else {
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.className = 'assist-text';
+          inp.placeholder = friendlyMissingLabel(pendingField);
+          form.appendChild(inp);
+          control = inp;
+        }
+        boxEl.appendChild(form);
+        const hint = document.createElement('div');
+        hint.className = 'assist-hint';
+        if (String((pendingField.route_key || pendingField.name || '')).trim() === 'depart_date' || String((pendingField.route_key || pendingField.name || '')).trim() === 'return_date') {
+          hint.textContent = 'Enter date in YYYY-MM-DD or 01-Apr-2026 format';
+        } else {
+          hint.textContent = fieldReplyHint(pendingField) || '';
+        }
+        if (hint.textContent) boxEl.appendChild(hint);
+        boxEl._field = pendingField;
+        boxEl._control = control;
+        grid.appendChild(boxEl);
+      });
+      card.appendChild(grid);
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'assist-btn-row';
+      const continueBtn = document.createElement('button');
+      continueBtn.type = 'button';
+      continueBtn.className = 'assist-small-btn';
+      continueBtn.textContent = 'Continue Search';
+      btnRow.appendChild(continueBtn);
+      card.appendChild(btnRow);
+
+      const foot = document.createElement('div');
+      foot.className = 'assist-hint';
+      foot.textContent = 'Use the fields above to continue. Chat typing is temporarily disabled during this correction step.';
+      card.appendChild(foot);
+      wrap.appendChild(card);
+
+      continueBtn.addEventListener('click', async () => {
+        const merged = Object.assign({}, chatState.pendingMissingField ? chatState.pendingMissingField.routePayload : {}, chatState.lastRoutePayload || {});
+        let hasError = false;
+        [...grid.children].forEach((child) => {
+          child.style.borderColor = '';
+          const fld = child._field;
+          const ctl = child._control;
+          const raw = ctl && 'value' in ctl ? String(ctl.value || '').trim() : '';
+          const resolved = resolveMissingFieldAnswer(raw, fld);
+          if (!resolved && String((fld && (fld.route_key || fld.name)) || '').trim() !== 'preferred_airline') {
+            hasError = true;
+            child.style.borderColor = '#fca5a5';
+            return;
+          }
+          const routeKey = fld.route_key || fld.name;
+          if (!routeKey) return;
+          if (resolved) merged[routeKey] = resolved;
+          else if (routeKey === 'preferred_airline') merged[routeKey] = '';
+        });
+        if (hasError) {
+          appendMessage('assistant', 'Please review the highlighted details and choose valid values before I continue.');
+          return;
+        }
+        clearPendingMissingField();
+        chatState.lastRoutePayload = merged;
+        saveState();
+        setBusy(true);
+        try {
+          await routeToSearch(merged);
+        } catch (err) {
+          resetSearchSelectionState();
+          appendMessage('assistant', providerConnectionMessage(err.message || 'Unable to continue with the selected details right now.'));
+        } finally { setBusy(false); }
+      });
+    });
+  }
+
+
+  function cardAirlineLabel(card){ return Array.isArray(card.airlines) ? card.airlines.join(' / ') : ''; }
+  function formatPrice(v){ const n = Number(v || 0); return Number.isFinite(n) ? formatAmount(Math.round(n), 0) : '0'; }
+  function formatTripType(value){ return String(value || '').replace(/_/g, ' ').trim() || ''; }
+  function formatShortDate(value){
+    const raw = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const d = new Date(raw + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).replace(',', '');
+  }
+  async function startFlightOptionSelection(card, idx, announceSelection){
+    if (!card || resultSelectionInProgress) return;
+    resultSelectionInProgress = true;
+    const out = card.outbound || {};
+    const optionText = displayOptionLabel(card, Number(idx || 0));
+    card.__visible_option_label = optionText;
+    card.visible_option_label = optionText;
+    chatState.selectedResult = card;
+    chatState.selectedVisibleOptionLabel = optionText;
+    clearInputContext('flight_option');
+    saveState();
+    lockPriorFlightSelectionControls(card.agent_fsr_id);
+    const optionParts = [
+      out.airline_name || '',
+      out.flight_number || '',
+      [out.city_from || '', out.city_to || ''].filter(Boolean).join(' to '),
+      out.depart || ''
+    ].filter(Boolean);
+    if (announceSelection) {
+      appendMessage('user', `I want ${optionText}${optionParts.length ? ` (${optionParts.join(' · ')})` : ''}`.replace(/\s+/g,' ').trim());
+    }
+    setBusy(true);
+    try {
+	  const data = await callFareOptions(card.agent_fsr_id, card);
+	  if (data && data.selected_result) {
+	    data.selected_result.visible_option_label = optionText;
+	    data.selected_result.__visible_option_label = optionText;
+	    data.selected_result.option_label = optionText;
+	  }
+
+	  chatState.selectedFareStage = data;
+	  saveState();
+
+	  lockPriorFlightSelectionControls(card.agent_fsr_id);
+
+	  appendAssistantFareOptions(data);
+	} finally {
+	  resultSelectionInProgress = false;
+	  setBusy(false);
+	}
+  }
+
+  async function handleTypedFlightOption(text){
+    const optionNumber = parseTypedFlightOption(text);
+    if (!optionNumber) {
+      appendMessage('assistant', invalidFlightOptionMessage());
+      return true;
+    }
+    const card = findFlightOptionCardByNumber(optionNumber);
+    if (!card) {
+      appendMessage('assistant', invalidFlightOptionMessage());
+      return true;
+    }
+    await startFlightOptionSelection(card, optionNumber - 1, false);
+    return true;
+  }
+
+  function filterAndRenderResults(container, bundle){
+    if (container && container.dataset && container.dataset.resultsLocked === 'Y') {
+      return;
+    }
+    const results = Array.isArray(bundle.results) ? bundle.results.slice() : [];
+    const stopsVal = container.querySelector('[data-filter="stops"]').value;
+    const airVal = container.querySelector('[data-filter="airline"]').value;
+    const minVal = Number(container.querySelector('[data-filter="min_price"]').value || 0);
+    const maxVal = Number(container.querySelector('[data-filter="max_price"]').value || 0);
+    let filtered = results.filter(r => {
+      if (stopsVal !== '' && Number(r.stop_count || 0) !== Number(stopsVal)) return false;
+      if (airVal && !(Array.isArray(r.airlines) && r.airlines.some(a => String(a).toUpperCase().includes(String(airVal).toUpperCase())))) return false;
+      const p = Number(r.price_total || 0);
+      if (minVal && p < minVal) return false;
+      if (maxVal && p > maxVal) return false;
+      return true;
+    });
+    const list = container.querySelector('.llm-result-list');
+    list.innerHTML = '';
+    chatState.visibleFlightResults = filtered;
+    saveState();
+    const totalInfo = container.querySelector('.llm-results-sub');
+    totalInfo.textContent = `Found ${results.length} flight(s). Showing ${filtered.length} after current filters.`;
+    if (!filtered.length) {
+      list.innerHTML = '<div class="llm-empty">No flights match the selected in-chat filters.</div>';
+      return;
+    }
+    filtered.forEach((card, idx) => list.appendChild(buildResultCard(card, idx)));
+  }
+
+  function buildResultCard(card, idx){
+    const wrap = document.createElement('div');
+    wrap.className = 'llm-card';
+    const rt = card.kind === 'ROUND_TRIP';
+    const out = card.outbound || {};
+    const ret = card.return_leg || {};
+    wrap.innerHTML = `
+      <div class="llm-card-top">
+        <div>
+          <div class="llm-select-wrap">
+            <button type="button" class="assist-small-btn llm-select-option-btn" data-action="select-option" data-agent-fsr-id="${escapeHtml(card.agent_fsr_id || '')}">Select Option</button>
+            <div class="llm-results-title">${escapeHtml(displayOptionLabel(card, idx))}</div>
+          </div>
+          <div class="llm-results-sub">${cardAirlineLabel(card) || 'Flight option'}</div>
+        </div>
+        <div class="llm-card-price">
+          <div class="price">${formatPrice(card.price_total)} ${card.currency || ''}</div>
+        </div>
+      </div>
+      <div class="llm-leg-grid"></div>`;
+    const grid = wrap.querySelector('.llm-leg-grid');
+    grid.appendChild(buildLegCard('Outbound', out));
+    if (rt) grid.appendChild(buildLegCard('Return', ret));
+    const selectBtn = wrap.querySelector('[data-action="select-option"]');
+    selectBtn.addEventListener('click', () => startFlightOptionSelection(card, idx, true));
+
+    const alreadySelected = chatState && chatState.selectedResult && String(chatState.selectedResult.agent_fsr_id || '').trim();
+    if (alreadySelected) {
+      lockFlightSelectButton(selectBtn, String(card.agent_fsr_id || '').trim() === alreadySelected);
+    }
+
+    return wrap;
+  }
+
+  function buildLegCard(title, leg){
+    const div = document.createElement('div');
+    div.className = 'llm-leg';
+    const routeLabel = [leg.city_from || leg.from_city || '', leg.city_to || leg.to_city || ''].filter(Boolean).join(' to ');
+    div.innerHTML = `
+      <div class="llm-leg-head">
+        <div>
+          <div class="llm-airline">${title} · ${leg.airline_name || ''}${routeLabel ? ` (${routeLabel})` : ''}</div>
+          <div class="llm-flightno">${leg.flight_number || ''}</div>
+        </div>
+      </div>
+      <div class="llm-route-row">
+        <div class="llm-airport-block">
+          <div class="llm-airport">${leg.from_airport || ''}</div>
+          <div class="llm-time">${leg.depart || ''}</div>
+        </div>
+        <div class="llm-center">
+          <span class="llm-stops-badge">${leg.stops_formatted || ''}</span>
+          <span class="llm-duration">${leg.duration || ''}</span>
+        </div>
+        <div class="llm-airport-block right">
+          <div class="llm-airport">${leg.to_airport || ''}</div>
+          <div class="llm-time">${leg.arrive || ''}</div>
+        </div>
+      </div>
+      <div class="llm-via">${leg.via_text || ''}</div>`;
+    return div;
+  }
+
+  function buildFareCard(fare, side, selectedId, onChange){
+    const label = document.createElement('label');
+    label.className = 'llm-fare-card' + (String(fare.fare_id || '') === String(selectedId || '') ? ' active' : '');
+    label.dataset.side = side;
+    label.dataset.fareId = String(fare.fare_id || '');
+    label.dataset.total = String(fare.total || 0);
+    label.dataset.currency = String(fare.currency || '');
+    label.dataset.family = String(fare.fare_family || '');
+    label.innerHTML = `
+      <div class="llm-fare-top">
+        <div>
+          <div class="llm-fare-class">${fare.travel_class || ''}</div>
+          <div class="llm-fare-amount">${formatAmount(fare.total || 0, 2)}</div>
+          <div class="llm-fare-currency">${fare.currency || ''}</div>
+          <div class="llm-fare-family">${fare.fare_family || ''}</div>
+          <div style="margin-top:10px; padding:8px 10px; border:1px solid rgba(17,24,39,0.08); border-radius:12px; background:#f8fafc; min-width:150px;">
+            <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="llm-fare-detail-val">Base</span><b>${formatAmount(fare.base_fare || 0, 2)}</b></div>
+            <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="llm-fare-detail-val">Taxes</span><b>${formatAmount(fare.taxes || 0, 2)}</b></div>
+            <div style="display:flex; justify-content:space-between; gap:12px; font-size:12px; line-height:1.7;"><span class="llm-fare-detail-val">Fees</span><b>${formatAmount(fare.fees || 0, 2)}</b></div>
+          </div>
+        </div>
+        <input type="radio" name="${side}_fare_choice_visual" value="${String(fare.fare_id || '')}" ${String(fare.fare_id || '') === String(selectedId || '') ? 'checked' : ''} style="width:20px; height:20px; accent-color:#eb4a25;"/>
+      </div>
+      <div class="llm-fare-sep"></div>
+      <div><div class="llm-fare-detail-key">Baggage</div><div class="llm-fare-detail-val">${fare.baggage || '-'}</div></div>
+      <div><div class="llm-fare-detail-key">Refund</div><div class="llm-fare-detail-val">${fare.refundable || '-'}</div></div>
+      <div><div class="llm-fare-detail-key">Change</div><div class="llm-fare-detail-val">${fare.changeable || '-'}</div></div>`;
+    const radio = label.querySelector('input[type="radio"]');
+    radio.addEventListener('change', () => onChange(side, String(fare.fare_id || '')));
+    label.addEventListener('click', (ev) => { if (ev.target !== radio) { radio.checked = true; onChange(side, String(fare.fare_id || '')); } });
+    return label;
+  }
+
+  function computeFareStageSelection(stage){
+    const cm = stage && stage.confirm_model ? stage.confirm_model : {};
+    const sf = cm.selected_fare || {};
+    const stateSel = stage.selection || {};
+    return {
+      outbound_fare_id: String(stateSel.outbound_fare_id || sf.outbound_fare_id || ''),
+      return_fare_id: String(stateSel.return_fare_id || sf.return_fare_id || ''),
+      fare_combo_key: String(stateSel.fare_combo_key || sf.fare_combo_key || ''),
+      total: Number(stateSel.total || sf.total || 0),
+      currency: String(stateSel.currency || sf.currency || ''),
+      display_family: String(stateSel.display_family || sf.display_family || '')
+    };
+  }
+
+  function updateFareStageSelection(stage){
+    const cm = stage && stage.confirm_model ? stage.confirm_model : {};
+    const selection = stage.selection || {};
+    const outboundId = String(selection.outbound_fare_id || '');
+    const returnId = String(selection.return_fare_id || '');
+    const tripType = String(cm.trip_type || 'ONE_WAY');
+    const outboundCards = Array.isArray(cm.outbound_fare_cards) ? cm.outbound_fare_cards : [];
+    const returnCards = Array.isArray(cm.return_fare_cards) ? cm.return_fare_cards : [];
+    const outCard = outboundCards.find(f => String(f.fare_id || '') === outboundId) || outboundCards[0] || {};
+    const retCard = tripType === 'ROUND_TRIP' ? (returnCards.find(f => String(f.fare_id || '') === returnId) || returnCards[0] || {}) : {};
+    const outTotal = Number(outCard.total || 0);
+    const retTotal = Number(retCard.total || 0);
+    const total = outTotal + retTotal;
+    const currency = String(outCard.currency || retCard.currency || '');
+    const outFamily = String(outCard.fare_family || '');
+    const retFamily = String(retCard.fare_family || '');
+    const displayFamily = tripType === 'ROUND_TRIP' && retFamily ? `${outFamily} + ${retFamily}` : outFamily;
+    let fareComboKey = '';
+    const selectedOption = stage.selected_fare_option || {};
+    const selectedSel = selectedOption.selection || {};
+    if (String(selectedSel.outbound_fare_id || '') === outboundId && String(selectedSel.return_fare_id || '') === returnId) fareComboKey = String(selectedOption.fare_combo_key || '');
+    const allOptions = (cm._all_fare_options || cm.fare_options || stage.fare_options || []);
+    if (!fareComboKey && Array.isArray(allOptions)) {
+      const hit = allOptions.find(opt => { const sel = (opt && opt.selection) || {}; return String(sel.outbound_fare_id || '') === outboundId && String(sel.return_fare_id || '') === returnId; });
+      if (hit) fareComboKey = String(hit.fare_combo_key || '');
+    }
+    stage.selection = { outbound_fare_id: outboundId, return_fare_id: returnId, total, currency, display_family: displayFamily, fare_combo_key: fareComboKey };
+    return stage.selection;
+  }
+
+  function appendAssistantFareOptions(data){
+    clearInputContext('flight_option');
+    const selectedResultPrompt = ((data || {}).selected_result || {});
+    const selectedIdForPrompt = String(selectedResultPrompt.agent_fsr_id || '').trim();
+    const activeSelectedIdForPrompt = String((chatState && chatState.selectedResult && chatState.selectedResult.agent_fsr_id) || '').trim();
+    let selectedOptionLabel = String(
+      selectedResultPrompt.visible_option_label ||
+      selectedResultPrompt.__visible_option_label ||
+      ''
+    ).trim();
+    if (!selectedOptionLabel && selectedIdForPrompt && activeSelectedIdForPrompt && selectedIdForPrompt === activeSelectedIdForPrompt) {
+      selectedOptionLabel = String(chatState.selectedVisibleOptionLabel || '').trim();
+    }
+    if (!selectedOptionLabel) {
+      selectedOptionLabel = String((selectedResultPrompt.option_label) || '').trim();
+    }
+    const selectedOutbound = selectedResultPrompt.outbound || {};
+    const selectedAirline = String(selectedOutbound.airline_name || '').trim();
+    const selectedFlightNo = String(selectedOutbound.flight_number || '').trim();
+    const selectedRoute = [selectedOutbound.city_from || selectedOutbound.from_city || '', selectedOutbound.city_to || selectedOutbound.to_city || ''].filter(Boolean).join(' to ');
+    const selectedDepart = String(selectedOutbound.depart || '').trim();
+    const selectedDetailText = [selectedAirline, selectedFlightNo, selectedRoute, selectedDepart].filter(Boolean).join(' · ');
+    const farePrompt = selectedOptionLabel
+      ? `You have selected ${selectedOptionLabel}${selectedDetailText ? ` (${selectedDetailText})` : ''}. Now please choose the fare option that suits your trip.`
+      : (data.user_message || 'Please choose the fare option that suits your trip.');
+    appendMessage('assistant', farePrompt, null, (wrap) => {
+      const stage = JSON.parse(JSON.stringify(data || {}));
+      const cm = stage.confirm_model || {};
+      const tripType = String(cm.trip_type || 'ONE_WAY');
+      if (!stage.selection) stage.selection = {};
+      const sf = cm.selected_fare || {};
+      stage.selection.outbound_fare_id = String(stage.selection.outbound_fare_id || sf.outbound_fare_id || '');
+      stage.selection.return_fare_id = String(stage.selection.return_fare_id || sf.return_fare_id || '');
+      stage._manualFareSelection = { outbound: false, return: false };
+      const parent = document.createElement('div');
+      parent.className = 'llm-fare-parent';
+      parent.dataset.llmManualOutbound = '0';
+      parent.dataset.llmManualReturn = '0';
+      const selectedResult = stage.selected_result || {};
+      const out = selectedResult.outbound || {};
+      const ret = selectedResult.return_leg || {};
+      const renderLegCopy = (title, leg) => { const block = document.createElement('div'); block.className = 'llm-fare-block'; block.appendChild(buildLegCard(title, leg)); return block; };
+      parent.appendChild(renderLegCopy('Outbound', out));
+
+      const onChange = (side, fareId) => {
+  if (!stage._manualFareSelection) stage._manualFareSelection = { outbound: false, return: false };
+
+  if (side === 'outbound') {
+    stage.selection.outbound_fare_id = fareId;
+    stage._manualFareSelection.outbound = true;
+    parent.dataset.llmManualOutbound = '1';
+  } else {
+    stage.selection.return_fare_id = fareId;
+    stage._manualFareSelection.return = true;
+    parent.dataset.llmManualReturn = '1';
+  }
+
+  updateFareStageSelection(stage);
+  refreshFareSelections();
+
+  const travelerReady = tripType === 'ROUND_TRIP'
+    ? Boolean(parent.dataset.llmManualOutbound === '1' && parent.dataset.llmManualReturn === '1' && String(stage.selection.outbound_fare_id || '').trim() && String(stage.selection.return_fare_id || '').trim())
+    : Boolean(String(stage.selection.outbound_fare_id || '').trim());
+
+  if (travelerReady) {
+    travelerShell.style.display = '';
+    setInputContext('traveler_action');
+    lockPriorFareSelectionControls();
+  } else if (tripType === 'ROUND_TRIP') {
+    travelerShell.style.display = 'none';
+    setInputContext('fare_option', { trip_type: tripType });
+  }
+
+  chatState.selectedFareStage = stage;
+  saveState();
+};
+
+      const outboundWrap = document.createElement('div');
+      outboundWrap.className = 'llm-fare-block';
+      outboundWrap.innerHTML = '<div class="llm-fare-block-title">Outbound Fare Options</div><div class="llm-fare-list"></div>';
+      const outList = outboundWrap.querySelector('.llm-fare-list');
+      parent.appendChild(outboundWrap);
+
+      let returnWrap = null, retList = null;
+      if (tripType === 'ROUND_TRIP') {
+        parent.appendChild(renderLegCopy('Return', ret));
+        returnWrap = document.createElement('div');
+        returnWrap.className = 'llm-fare-block';
+        returnWrap.innerHTML = '<div class="llm-fare-block-title">Return Fare Options</div><div class="llm-fare-list"></div>';
+        retList = returnWrap.querySelector('.llm-fare-list');
+        parent.appendChild(returnWrap);
+      }
+
+      const total = document.createElement('div');
+      total.className = 'llm-total-card';
+      total.innerHTML = '<div class="llm-total-label">Total Amount</div><div class="llm-total-amount"></div><div class="llm-total-family"></div>';
+      parent.appendChild(total);
+
+      function refreshFareSelections(){
+        const current = updateFareStageSelection(stage);
+        outList.innerHTML = '';
+        (cm.outbound_fare_cards || []).forEach(fare => outList.appendChild(buildFareCard(fare, 'outbound', current.outbound_fare_id, onChange)));
+        if (retList) {
+          retList.innerHTML = '';
+          (cm.return_fare_cards || []).forEach(fare => retList.appendChild(buildFareCard(fare, 'return', current.return_fare_id, onChange)));
+        }
+        total.querySelector('.llm-total-amount').textContent = formatMoney(current.currency, current.total || 0, 2);
+        total.querySelector('.llm-total-family').textContent = current.display_family || '';
+      }
+
+      refreshFareSelections();
+      wrap.appendChild(parent);
+
+      const travelerShell = document.createElement('div');
+      travelerShell.className = 'llm-traveler-shell';
+      travelerShell.style.display = 'none';
+      travelerShell.innerHTML = '<div class="llm-traveler-title">Traveller Details</div><div class="llm-traveler-actions"></div><div class="llm-traveler-content"></div>';
+      const actions = travelerShell.querySelector('.llm-traveler-actions');
+      const content = travelerShell.querySelector('.llm-traveler-content');
+      const useBtn = document.createElement('button');
+      useBtn.type = 'button';
+      useBtn.className = 'assist-small-btn';
+      useBtn.textContent = 'Use Saved Travellers';
+      const manageBtn = document.createElement('a');
+      manageBtn.className = 'assist-small-btn';
+      manageBtn.textContent = 'Manage Traveller Docs';
+      manageBtn.href = `/travelers?agent_fsr_id=${encodeURIComponent(String(stage.agent_fsr_id || ''))}`;
+      manageBtn.target = '_blank';
+      manageBtn.rel = 'noopener';
+      actions.appendChild(useBtn);
+      actions.appendChild(manageBtn);
+
+      const renderTravelerSelection = (bundle) => {
+        setInputContext('traveler_select');
+        const travelers = Array.isArray(bundle && bundle.travelers) ? bundle.travelers : [];
+        content.innerHTML = '';
+        if (!travelers.length) {
+          const empty = document.createElement('div');
+          empty.className = 'llm-empty';
+          empty.textContent = 'No active traveller records found. Please open Manage Traveller Docs and save active traveller records.';
+          content.appendChild(empty);
+          return;
+        }
+
+        const buildSelectedTravelerList = (selectedIdsNow) => {
+          const picked = new Set((selectedIdsNow || []).map(v => String(v)));
+          return travelers
+            .filter(traveler => picked.has(String(traveler.document_id || '')))
+            .map(traveler => ({
+              document_id: Number(traveler.document_id || 0),
+              label: traveler.label || '',
+              traveler_type: traveler.traveler_type || ''
+            }));
+        };
+
+        const buildSelectedText = (selectedRows) => {
+          const counts = { Adult: 0, Child: 0, Infant: 0 };
+          (selectedRows || []).forEach(row => {
+            const kind = String(row.traveler_type || '').trim();
+            if (kind === 'Adult') counts.Adult += 1;
+            else if (kind === 'Child') counts.Child += 1;
+            else if (kind === 'Infant') counts.Infant += 1;
+          });
+          return Object.entries(counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ') || 'No traveller selected';
+        };
+
+        const extractFriendlyValidation = (rawText, selectedIdsNow) => {
+          const raw = String(rawText || '').trim();
+          const cleaned = raw
+            .replace(/^Unable to validate traveller selection:\s*/i, '')
+            .replace(/^Unable to process your request right now\.?\s*/i, '')
+            .trim();
+          const selectedRows = buildSelectedTravelerList(selectedIdsNow || []);
+          const selectedText = buildSelectedText(selectedRows);
+          let requiredText = '';
+          const match = cleaned.match(/Please select\s+(.+?)\.?$/i);
+          if (match && match[1]) requiredText = match[1].trim();
+          if (/At least one ADULT traveller must be selected/i.test(cleaned)) requiredText = 'at least 1 Adult';
+          return {
+            detail: cleaned || 'Please review traveller selection.',
+            requiredText,
+            selectedText,
+            selectedRows,
+          };
+        };
+
+        let reviewPromptEl = null;
+        const clearTravelerReviewPrompt = () => {
+          if (reviewPromptEl && reviewPromptEl.parentNode) reviewPromptEl.parentNode.removeChild(reviewPromptEl);
+          reviewPromptEl = null;
+        };
+
+        const renderTravelerSaved = async (result) => {
+          clearTravelerReviewPrompt();
+          clearInputContext('traveler_action');
+          content.innerHTML = '';
+          const ok = document.createElement('div');
+          ok.className = 'llm-traveler-success';
+          ok.textContent = result.user_message || 'Traveller details have been saved successfully.';
+          content.appendChild(ok);
+          if (Array.isArray(result.selected_travelers) && result.selected_travelers.length) {
+            const list2 = document.createElement('div');
+            list2.className = 'llm-traveler-list';
+            result.selected_travelers.forEach(traveler => {
+              const row = document.createElement('div');
+              row.className = 'llm-traveler-item';
+              row.innerHTML = `<div><div class="llm-traveler-label">${traveler.label || ''}</div></div>`;
+              list2.appendChild(row);
+            });
+            content.appendChild(list2);
+          }
+          try {
+            setBusy(true,'Preparing booking...');
+            const preview = await callBookingPreview(stage.agent_fsr_id, result.selected_document_ids || [], stage.selection || {});
+            if (preview.status === 'BOOKING_CONFLICT') {
+              appendMessage('assistant', preview.user_message || 'You already have a confirmed booking.', null, (w)=>{ const bookingUrl = resolveBookingSummaryUrl(preview); const r=document.createElement('div'); r.className='assist-btn-row'; r.innerHTML=`<a class="assist-small-btn" href="${bookingUrl}" target="_blank" rel="noopener">Open Manage Booking</a><button type="button" class="assist-small-btn" data-action="new-search">Start New Search</button>`; w.appendChild(r); const nb=r.querySelector('[data-action="new-search"]'); if(nb) nb.addEventListener('click', ()=>{ markControlLocked(nb, 'Starting a clean new search.'); nb.textContent='Starting New Search...'; hardResetLlmChatAndReload(); }); });
+            } else {
+              setInputContext('booking_review');
+              renderPreBookingCard(preview);
+            }
+          } catch(err) {
+            appendMessage('assistant', providerConnectionMessage(err.message || 'Unable to prepare booking preview right now.'));
+          } finally { setBusy(false); }
+        };
+
+        const showTravelerReviewPrompt = (info, selectedIdsNow) => {
+          setInputContext('traveler_review');
+          clearTravelerReviewPrompt();
+          reviewPromptEl = document.createElement('div');
+          reviewPromptEl.className = 'llm-empty';
+          reviewPromptEl.style.textAlign = 'left';
+
+          const p1 = document.createElement('div');
+          p1.style.fontWeight = '800';
+          p1.style.color = '#0f172a';
+          p1.textContent = 'Please review traveller selection';
+          reviewPromptEl.appendChild(p1);
+
+          const p2 = document.createElement('div');
+          p2.style.marginTop = '8px';
+          p2.textContent = info.detail || 'Selected travellers do not match the booking requirement.';
+          reviewPromptEl.appendChild(p2);
+
+          if (info.requiredText) {
+            const p3 = document.createElement('div');
+            p3.style.marginTop = '8px';
+            p3.textContent = `Required: ${info.requiredText}`;
+            reviewPromptEl.appendChild(p3);
+          }
+
+          const p4 = document.createElement('div');
+          p4.style.marginTop = '6px';
+          p4.textContent = `Current selection: ${info.selectedText}`;
+          reviewPromptEl.appendChild(p4);
+
+          const p5 = document.createElement('div');
+          p5.style.marginTop = '10px';
+          p5.textContent = 'Do you want to continue with the current traveller selection?';
+          reviewPromptEl.appendChild(p5);
+
+          const btnRow = document.createElement('div');
+          btnRow.className = 'assist-btn-row';
+          btnRow.style.marginTop = '10px';
+          const yesBtn = document.createElement('button');
+          yesBtn.type = 'button';
+          yesBtn.className = 'assist-small-btn';
+          yesBtn.textContent = 'Yes, Continue';
+          const noBtn = document.createElement('button');
+          noBtn.type = 'button';
+          noBtn.className = 'assist-small-btn';
+          noBtn.textContent = 'No, Adjust Selection';
+          btnRow.appendChild(yesBtn);
+          btnRow.appendChild(noBtn);
+          reviewPromptEl.appendChild(btnRow);
+          content.appendChild(reviewPromptEl);
+
+          yesBtn.addEventListener('click', async () => {
+            setBusy(true, 'Saving travellers...');
+            try {
+              const result = await callTravelerSelection(stage.agent_fsr_id, selectedIdsNow || [], stage.selection || {}, true);
+              chatState.selectedTravelerStage = result;
+              saveState();
+              renderTravelerSaved(result);
+            } catch (err) {
+              const retryInfo = extractFriendlyValidation(err.message || 'Unable to validate traveller selection right now.', selectedIdsNow || []);
+              showTravelerReviewPrompt(retryInfo, selectedIdsNow || []);
+            } finally {
+              setBusy(false);
+            }
+          });
+
+          noBtn.addEventListener('click', () => {
+            setInputContext('traveler_select');
+            clearTravelerReviewPrompt();
+          });
+        };
+
+        const title = document.createElement('div');
+        title.className = 'llm-traveler-title';
+        title.textContent = bundle.user_message || 'Select Travellers';
+        content.appendChild(title);
+        const list = document.createElement('div');
+        list.className = 'llm-traveler-list';
+        const selectedIds = new Set((chatState.selectedTravelerStage && Array.isArray(chatState.selectedTravelerStage.selected_document_ids) ? chatState.selectedTravelerStage.selected_document_ids : []).map(v => String(v)));
+        travelers.forEach(traveler => {
+          const row = document.createElement('label');
+          row.className = 'llm-traveler-item';
+          row.innerHTML = `<input type="checkbox" value="${String(traveler.document_id || '')}" ${selectedIds.has(String(traveler.document_id || '')) ? 'checked' : ''}><div><div class="llm-traveler-label">${traveler.label || ''}</div></div>`;
+          list.appendChild(row);
+        });
+        content.appendChild(list);
+        const footer = document.createElement('div');
+        footer.className = 'llm-traveler-footer';
+        const confirmBtn = document.createElement('button');
+        confirmBtn.type = 'button';
+        confirmBtn.className = 'assist-small-btn';
+        confirmBtn.textContent = 'Confirm Traveller Selection';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'assist-small-btn';
+        cancelBtn.textContent = 'Cancel';
+        footer.appendChild(confirmBtn);
+        footer.appendChild(cancelBtn);
+        content.appendChild(footer);
+
+        cancelBtn.addEventListener('click', () => { setInputContext('traveler_action'); clearTravelerReviewPrompt(); content.innerHTML = ''; });
+        confirmBtn.addEventListener('click', async () => {
+          clearTravelerReviewPrompt();
+          const selectedIdsNow = Array.from(content.querySelectorAll('input[type="checkbox"]:checked')).map(el => Number(el.value || 0)).filter(v => Number.isFinite(v) && v > 0);
+          setBusy(true, 'Validating travellers...');
+          try {
+            const result = await callTravelerSelection(stage.agent_fsr_id, selectedIdsNow, stage.selection || {}, false);
+            chatState.selectedTravelerStage = result;
+            saveState();
+            renderTravelerSaved(result);
+          } catch (err) {
+            const info = extractFriendlyValidation(err.message || 'Unable to validate traveller selection right now.', selectedIdsNow);
+            showTravelerReviewPrompt(info, selectedIdsNow);
+          } finally {
+            setBusy(false);
+          }
+        });
+      };
+
+      useBtn.addEventListener('click', async () => {
+        setBusy(true, 'Loading travellers...');
+        try {
+          const bundle = await callTravelers(stage.agent_fsr_id);
+          renderTravelerSelection(bundle);
+        } catch (err) {
+          appendMessage('assistant', providerConnectionMessage(err.message || 'Unable to load travellers right now.'));
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      wrap.appendChild(travelerShell);
+      setInputContext('fare_option', {
+        trip_type: tripType,
+        option_count: Array.isArray(cm.outbound_fare_cards) ? cm.outbound_fare_cards.length : 0,
+        return_option_count: Array.isArray(cm.return_fare_cards) ? cm.return_fare_cards.length : 0
+      });
+      chatState.selectedFareStage = stage;
+      saveState();
+    });
+  }
+
+
+  function disableElement(el, hide=false){
+    if (!el) return;
+    if (hide) {
+      el.style.display = 'none';
+      return;
+    }
+    if ('disabled' in el) el.disabled = true;
+    el.classList.add('is-disabled');
+    el.setAttribute('aria-disabled', 'true');
+    if (el.tagName === 'A') {
+      el.removeAttribute('href');
+      el.removeAttribute('target');
+      el.removeAttribute('rel');
+    }
+  }
+
+  function lockPriorBookingControls(){
+    document.querySelectorAll('.llm-select-option-btn').forEach(el => disableElement(el, true));
+    document.querySelectorAll('.llm-traveler-actions').forEach(el => disableElement(el, true));
+    document.querySelectorAll('[data-action="confirm-booking"],[data-action="cancel-booking"],[data-action="start-new-search"]').forEach(el => disableElement(el, true));
+    document.querySelectorAll('.llm-fare-card input[type="radio"]').forEach(el => {
+      el.disabled = true;
+      el.tabIndex = -1;
+      el.style.display = 'none';
+      const parent = el.closest('.llm-fare-card');
+      if (parent) parent.style.pointerEvents = 'none';
+    });
+  }
+
+  function hardResetLlmChatAndReload(){
+    clearFlowState();
+    try {
+      const params = new URLSearchParams();
+      params.set('fresh', '1');
+      params.set('hard_reset', '1');
+      params.set('t', String(Date.now()));
+      window.location.replace(window.location.pathname + '?' + params.toString());
+    } catch (e) {
+      window.location.href = '/portal/llm/chat?fresh=1&hard_reset=1&t=' + Date.now();
+    }
+  }
+
+  function attachBookingSummaryActions(scope){
+    if (!scope) return;
+    scope.querySelectorAll('[data-action="start-new-booking"]').forEach(btnEl => {
+      btnEl.addEventListener('click', () => {
+        markControlLocked(btnEl, 'Starting a clean new booking.');
+        btnEl.textContent = 'Starting New Booking...';
+        hardResetLlmChatAndReload();
+      });
+    });
+  }
+
+  function buildCompletedBookingButtons(stage){
+    const providerItineraryUrl = (stage && (stage.provider_itinerary_url || stage.provider_portal_url || stage.manage_booking_url)) || '#';
+    return `<a class="assist-small-btn" href="${providerItineraryUrl}" target="_blank" rel="noopener">View & Download Itinerary</a><button type="button" class="assist-small-btn" data-action="start-new-booking">Start New Booking</button>`;
+  }
+
+  function appendPaymentCompletedActions(stage){
+    const msg = (stage && stage.user_message) || 'Payment completed successfully. Your itinerary is now available.';
+    appendMessage('assistant', `${msg} Please use the buttons below.`, null, (wrap) => {
+      const row = document.createElement('div');
+      row.className = 'assist-btn-row';
+      row.innerHTML = buildCompletedBookingButtons(stage || {});
+      wrap.appendChild(row);
+      attachBookingSummaryActions(wrap);
+    });
+  }
+
+  function updateExistingBookingCard(stage, options){
+    const opts = options || {};
+    const bookingRef = String((stage && stage.booking_ref) || '').trim();
+    if (!bookingRef) return false;
+    const cards = Array.from(document.querySelectorAll('.llm-parent-card[data-booking-ref]'));
+    const card = cards.find(el => String(el.getAttribute('data-booking-ref') || '').trim() === bookingRef);
+    if (!card) return false;
+    const segments = Array.isArray(stage.segments) ? stage.segments : [];
+    const travelers = Array.isArray(stage.travelers) ? stage.travelers : [];
+    const routeLines = segments.map(seg => `<div class="llm-mini-line"><strong>${seg.label || ''}</strong> · ${seg.flight_number || ''} · ${seg.from || ''} → ${seg.to || ''}</div>`).join('');
+    const travelerLines = travelers.map(t => `<div class="llm-mini-line">${t.label || ''}</div>`).join('');
+    let btns = '';
+    if (String(stage.payment_status || '').toUpperCase() === 'PENDING') {
+      btns = `<a class="assist-small-btn" href="${stage.payment_url || '#'}" target="_blank" rel="noopener">Proceed to Payment</a>`;
+    } else if (!opts.hideCompletedButtons) {
+      btns = buildCompletedBookingButtons(stage);
+    }
+    const actionRow = btns ? `<div class="assist-btn-row" data-booking-ref="${stage.booking_ref || ''}">${btns}</div>` : '';
+    card.innerHTML = `<div class="llm-parent-title">Booking Reference: ${stage.booking_ref || ''}</div><div class="llm-mini-line">Booking Status : <strong>${stage.booking_status || 'CONFIRMED'}</strong> · ${stage.trip_type || ''} · ${stage.traveller_count || 0} Travellers</div><div class="llm-mini-line">${stage.total_display || ''}</div><div class="llm-mini-line">Payment Status: <strong>${stage.payment_status || ''}</strong></div><div class="llm-mini-section"><div class="llm-mini-section-title">Trip</div>${routeLines}</div><div class="llm-mini-section"><div class="llm-mini-section-title">Travellers</div>${travelerLines}</div>${actionRow}`;
+    attachBookingSummaryActions(card);
+    return true;
+  }
+
+  function renderCompactBookingSummary(stage){
+    if (String((stage && stage.payment_status) || '').toUpperCase() === 'PENDING') setInputContext('payment_pending');
+    else if (String((stage && stage.payment_status) || '').toUpperCase() === 'SUCCESS') setInputContext('completed');
+    else clearInputContext('traveler_action');
+    chatState.bookingSummaryStage = stage; saveState();
+    const skipLeadMessage = ['PAYMENT_DONE'].includes(String(stage.status || '').toUpperCase());
+    const leadMessage = stage.user_message || (String(stage.payment_status || '').toUpperCase() === 'PENDING' ? 'Your booking is temporarily held pending payment. Please complete payment to confirm your booking.' : 'Payment completed successfully. Your itinerary is now available.');
+    const renderCard = (wrap) => {
+      const card = document.createElement('div');
+      card.className = 'llm-parent-card';
+      card.setAttribute('data-booking-ref', String(stage.booking_ref || ''));
+      const segments = Array.isArray(stage.segments) ? stage.segments : [];
+      const travelers = Array.isArray(stage.travelers) ? stage.travelers : [];
+      const routeLines = segments.map(seg => `<div class="llm-mini-line"><strong>${seg.label || ''}</strong> · ${seg.flight_number || ''} · ${seg.from || ''} → ${seg.to || ''}</div>`).join('');
+      const travelerLines = travelers.map(t => `<div class="llm-mini-line">${t.label || ''}</div>`).join('');
+      let btns = '';
+      if (String(stage.payment_status || '').toUpperCase() === 'PENDING') {
+        btns = `<a class="assist-small-btn" href="${stage.payment_url || '#'}" target="_blank" rel="noopener">Proceed to Payment</a>`;
+      } else {
+        btns = buildCompletedBookingButtons(stage);
+      }
+      const actionRow = btns ? `<div class="assist-btn-row">${btns}</div>` : '';
+      card.innerHTML = `<div class="llm-parent-title">Booking Reference: ${stage.booking_ref || ''}</div><div class="llm-mini-line">Booking Status : <strong>${stage.booking_status || 'CONFIRMED'}</strong> · ${stage.trip_type || ''} · ${stage.traveller_count || 0} Travellers</div><div class="llm-mini-line">${stage.total_display || ''}</div><div class="llm-mini-line">Payment Status: <strong>${stage.payment_status || ''}</strong></div><div class="llm-mini-section"><div class="llm-mini-section-title">Trip</div>${routeLines}</div><div class="llm-mini-section"><div class="llm-mini-section-title">Travellers</div>${travelerLines}</div>${actionRow}`;
+      wrap.appendChild(card);
+      const bookingButtons = card.querySelector('.assist-btn-row');
+      if (bookingButtons) bookingButtons.dataset.bookingRef = stage.booking_ref || '';
+      attachBookingSummaryActions(card);
+    };
+    if (skipLeadMessage) {
+      const wrap = document.createElement('div');
+      wrap.className = 'msg msg-assistant';
+      wrap.innerHTML = '<div class="msg-role">Assistant</div><div class="msg-body"></div>';
+      box.appendChild(wrap);
+      renderCard(wrap);
+      scrollBottom();
+    } else {
+      appendMessage('assistant', leadMessage, null, renderCard);
+    }
+  }
+
+  async function startNewSearchFromCurrentRequest(triggerEl){
+    const routePayload = Object.assign({}, chatState.lastRoutePayload || {});
+    const hasRoute = Object.keys(routePayload).length > 0;
+    if (!hasRoute) {
+      appendMessage("assistant", "I cannot restart the search because the original search request is not available in this chat session. Please type a new travel request.");
+      setInputContext("travel_request");
+      return;
+    }
+
+    if (triggerEl) {
+      markControlLocked(triggerEl, "A new search has already been started.");
+      triggerEl.textContent = "Starting New Search...";
+    }
+
+    lockPriorBookingControls();
+
+    chatState.selectedResult = null;
+    chatState.selectedFareStage = null;
+    chatState.selectedTravelerStage = null;
+    chatState.bookingSummaryStage = null;
+    chatState.pendingMissingField = null;
+    saveState();
+
+    appendMessage("assistant", "Starting a new search using the same travel request. I will fetch fresh available flight options now.");
+    setBusy(true);
+    try {
+      await routeToSearch(routePayload);
+    } catch (err) {
+      appendMessage("assistant", providerConnectionMessage(err.message || "Unable to start a new search right now."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function renderPreBookingCard(stage){
+    setInputContext('booking_review');
+    appendMessage('assistant', stage.user_message || 'Please review your journey details before confirming your booking.', null, (wrap)=>{
+      const parent = document.createElement('div');
+      parent.className = 'llm-parent-card';
+      const lockedFareStage = chatState.selectedFareStage || {};
+      const cm = (lockedFareStage.confirm_model && typeof lockedFareStage.confirm_model === 'object') ? lockedFareStage.confirm_model : (stage.confirm_model || {});
+      const selectedResult = (lockedFareStage.selected_result && typeof lockedFareStage.selected_result === 'object') ? lockedFareStage.selected_result : {};
+      const effectiveSelection = (lockedFareStage.selection && typeof lockedFareStage.selection === 'object' && (lockedFareStage.selection.outbound_fare_id || lockedFareStage.selection.fare_combo_key)) ? lockedFareStage.selection : ((stage.selection && typeof stage.selection === 'object') ? stage.selection : {});
+      const travelers = Array.isArray(stage.selected_travelers) ? stage.selected_travelers : [];
+      const tripType = String(cm.trip_type || stage.trip_type || 'ONE_WAY');
+      const outbound = selectedResult.outbound || {};
+      const ret = selectedResult.return_leg || {};
+
+      function selectedFareCard(cards, fareId){
+        const list = Array.isArray(cards) ? cards : [];
+        const hit = list.find(f => String(f.fare_id || '') === String(fareId || ''));
+        return hit || list[0] || {};
+      }
+      function fareSummaryCard(f, label){
+        if (!f || typeof f !== 'object' || !Object.keys(f).length) return '';
+        const totalText = formatMoney(f.currency, f.total || 0, 2);
+        return `
+          <div class="llm-fare-card">
+            <div class="llm-fare-title">${label}</div>
+            <div class="llm-fare-price">${totalText}</div>
+            <div class="llm-mini-line">${f.travel_class || ''}</div>
+            <div class="llm-mini-line">${f.fare_family || ''}</div>
+            <div class="llm-mini-line">Baggage ${f.baggage || '-'}</div>
+            <div class="llm-mini-line">Refund ${f.refundable || '-'}</div>
+            <div class="llm-mini-line">Change ${f.changeable || '-'}</div>
+          </div>`;
+      }
+
+      const selOut = selectedFareCard(cm.outbound_fare_cards, effectiveSelection.outbound_fare_id || (cm.selected_fare||{}).outbound_fare_id);
+      const selRet = tripType === 'ROUND_TRIP' ? selectedFareCard(cm.return_fare_cards, effectiveSelection.return_fare_id || (cm.selected_fare||{}).return_fare_id) : {};
+      const previewCurrency = String((stage.selected_fare && stage.selected_fare.currency) || effectiveSelection.currency || selOut.currency || selRet.currency || '').trim();
+      const previewTotalAmount = Number(stage.total_amount || 0);
+      const computedTotalAmount = Number(selOut.total || 0) + Number(selRet.total || 0);
+      const totalDisplay = previewTotalAmount > 0
+        ? formatMoney(previewCurrency, previewTotalAmount, 2)
+        : formatMoney(previewCurrency, Number(effectiveSelection.total || computedTotalAmount), 2);
+      const totalFamily = effectiveSelection.display_family || (tripType === 'ROUND_TRIP' ? [selOut.fare_family || '', selRet.fare_family || ''].filter(Boolean).join(' + ') : (selOut.fare_family || ''));
+
+      const routeParts = [];
+      if (outbound && Object.keys(outbound).length) {
+        routeParts.push(`<div class="llm-fare-block">${buildLegCard('Outbound', outbound).outerHTML}</div>`);
+      }
+      routeParts.push(fareSummaryCard(selOut, 'Selected Outbound Fare'));
+      if (tripType === 'ROUND_TRIP') {
+        if (ret && Object.keys(ret).length) {
+          routeParts.push(`<div class="llm-fare-block">${buildLegCard('Return', ret).outerHTML}</div>`);
+        }
+        routeParts.push(fareSummaryCard(selRet, 'Selected Return Fare'));
+      }
+      const trav = `<div class="llm-fare-card"><div class="llm-fare-title">Travellers</div>${travelers.map(t=>`<div class="llm-mini-line">${t.label||''}</div>`).join('')}</div>`;
+      parent.innerHTML = `<div class="llm-parent-title">Booking Review</div>${routeParts.filter(Boolean).join('')}${trav}<div class="llm-fare-card"><div class="llm-fare-title">Total Amount</div><div class="llm-fare-price">${totalDisplay}</div>${totalFamily ? `<div class="llm-mini-line">${totalFamily}</div>` : ''}</div><div class="assist-btn-row"><button type="button" class="assist-small-btn" data-action="confirm-booking">Confirm Booking</button><button type="button" class="assist-small-btn" data-action="start-new-search">Start New Search</button></div>`;
+      wrap.appendChild(parent);
+      parent.querySelector('[data-action="confirm-booking"]').addEventListener('click', async()=>{
+        setBusy(true);
+        showBusyIndicator();
+        const startedAt = Date.now();
+        try {
+          const data = await callBookingConfirm(stage.agent_fsr_id, stage.selected_document_ids || [], effectiveSelection || {});
+          const remainingMs = Math.max(0, 1000 - (Date.now() - startedAt));
+          if (remainingMs) await llmPause(remainingMs);
+          hideBusyIndicator();
+          if(data.status==='BOOKING_CONFLICT'){
+            appendMessage('assistant', data.user_message || 'You already have a confirmed booking.', null, (w)=>{ const bookingUrl = resolveBookingSummaryUrl(data); const r=document.createElement('div'); r.className='assist-btn-row'; r.innerHTML=`<a class="assist-small-btn" href="${bookingUrl}" target="_blank" rel="noopener">View Booking</a><button type="button" class="assist-small-btn" data-action="new-search">Start New Search</button>`; w.appendChild(r); const nb=r.querySelector('[data-action="new-search"]'); if(nb) nb.addEventListener('click', ()=>{ markControlLocked(nb, 'Starting a clean new search.'); nb.textContent='Starting New Search...'; hardResetLlmChatAndReload(); }); });
+          } else {
+            setInputContext('payment_pending');
+            lockPriorBookingControls();
+            renderCompactBookingSummary(data);
+          }
+        } catch(err){
+          hideBusyIndicator();
+          appendMessage('assistant', providerConnectionMessage(err.message || 'Unable to complete booking right now.'));
+        } finally {
+          setBusy(false);
+        }
+      });
+      const startNewSearchBtn = parent.querySelector('[data-action="start-new-search"]');
+      if (startNewSearchBtn) {
+        startNewSearchBtn.addEventListener('click', () => startNewSearchFromCurrentRequest(startNewSearchBtn));
+      }
+    });
+  }
+
+  function appendAssistantResults(data){
+    const resultCount = Number(data && data.result_count || 0);
+    const hasResults = Array.isArray(data && data.results) && data.results.length > 0 && resultCount > 0;
+    const leadMessage = hasResults
+      ? `I found ${resultCount} matching flight option${resultCount === 1 ? '' : 's'} for your trip. Please review the options below and select the flight that best suits your travel plan.`
+      : 'I could not find matching flight options for this trip. Please type a new travel request or adjust the route/date and try again.';
+    appendMessage('assistant', leadMessage, null, (wrap) => {
+      const shell = document.createElement('div');
+      shell.className = 'llm-results-shell';
+      const filterOptions = (data && data.filters) || {};
+      shell.innerHTML = `
+        <div class="llm-results-top">
+          <div class="llm-results-title">Flight Results <span class="llm-results-sub inline"></span></div>
+        </div>
+        <div class="llm-filter-bar">
+          <div class="llm-filter-box"><label>Stops</label><select data-filter="stops"><option value="">All</option>${Array.from({length:10}).map((_,i)=>`<option value="${i}">${i}</option>`).join('')}</select></div>
+          <div class="llm-filter-box"><label>Airline</label><select data-filter="airline"><option value="">All Airlines</option>${(filterOptions.airlines || []).map(a=>`<option value="${String(a).replace(/"/g,'&quot;')}">${a}</option>`).join('')}</select></div>
+          <div class="llm-filter-box"><label>Min Price</label><input data-filter="min_price" type="number" min="0" placeholder="e.g. ${filterOptions.min_price || 0}"></div>
+          <div class="llm-filter-box"><label>Max Price</label><input data-filter="max_price" type="number" min="0" placeholder="e.g. ${filterOptions.max_price || 0}"></div>
+          <button type="button" class="assist-small-btn" data-action="apply">Apply</button>
+          <button type="button" class="assist-small-btn" data-action="reset">Reset</button>
+        </div>
+        <div class="llm-result-list"></div>`;
+      shell.querySelector('[data-action="apply"]').addEventListener('click', () => filterAndRenderResults(shell, data));
+      shell.querySelector('[data-action="reset"]').addEventListener('click', () => {
+        shell.querySelector('[data-filter="stops"]').value = '';
+        shell.querySelector('[data-filter="airline"]').value = '';
+        shell.querySelector('[data-filter="min_price"]').value = '';
+        shell.querySelector('[data-filter="max_price"]').value = '';
+        filterAndRenderResults(shell, data);
+      });
+      shell.querySelectorAll('select,input').forEach(el => el.addEventListener('change', () => filterAndRenderResults(shell, data)));
+      wrap.appendChild(shell);
+      if (hasResults) {
+        setInputContext('flight_option', { option_count: Array.isArray(data.results) ? data.results.length : 0 });
+      } else {
+        resetSearchSelectionState();
+      }
+      filterAndRenderResults(shell, data);
+    });
+  }
+
+  async function submitPendingMissingField(text){
+    if (getPendingMissingFields().length) {
+      appendMessage('assistant', 'Please use the correction fields above, then click Continue Search.');
+      return true;
+    }
+    return false;
+  }
+
+
+  async function submitMessage(){
+    if (chatInputLocked) return;
+    const currentModeGuard = String((chatState.inputContext && chatState.inputContext.mode) || 'travel_request');
+    if (['traveler_action', 'traveler_select', 'traveler_review', 'booking_review', 'payment_pending', 'missing_fields_review', 'completed'].includes(currentModeGuard)) return;
+    const text = (input.value || '').trim();
+    if (!text) return;
+    appendMessage('user', text);
+    input.value = '';
+    input.focus();
+
+    const currentContextMode = String((chatState.inputContext && chatState.inputContext.mode) || 'travel_request');
+    if (currentContextMode === 'flight_option' && !chatState.pendingMissingField) {
+      if (!parseTypedFlightOption(text) && looksLikeNewTravelRequest(text)) {
+        resetSearchSelectionState();
+      } else {
+        await handleTypedFlightOption(text);
+        return;
+      }
+    }
+
+    if (currentContextMode === 'fare_option' && !chatState.pendingMissingField) {
+      handleTypedFareOption(text);
+      return;
+    }
+
+    if (chatState.pendingMissingField) {
+      setBusy(true);
+      try { const handled = await submitPendingMissingField(text); if (handled) return; }
+      catch (err) { appendMessage('assistant', providerConnectionMessage(err.message || 'Unable to continue with the missing detail right now.')); }
+      finally { setBusy(false); }
+      return;
+    }
+
+    setInputContext('travel_request');
+    setBusy(true);
+    try {
+      const data = await callIntent(text);
+      chatState.lastOriginalMessage = text;
+      chatState.lastNormalizedIntent = data && data.normalized_intent ? data.normalized_intent : null;
+      chatState.lastRoutePayload = data && data.route_payload ? data.route_payload : chatState.lastRoutePayload;
+      saveState();
+      const summary = buildSummary(data);
+      if (data && data.next_action === 'SHOW_MESSAGE') {
+        appendMessage('assistant', data.user_message || 'Please share your travel plan in one message, and I will guide you step by step.');
+        setInputContext('travel_request');
+        return;
+      }
+      if (data && data.next_action === 'ASK_MISSING_FIELDS') {
+        clearInputContext('flight_option');
+        rememberPendingMissingField(data);
+        appendAssistantFieldPrompt(currentMissingField(), summary);
+        return;
+      }
+      if (data && data.next_action === 'ROUTE_TO_SEARCH' && data.route_payload) {
+        await routeToSearch(data.route_payload);
+        return;
+      }
+      if (data && data.user_message) {
+        appendMessage('assistant', data.user_message);
+        setInputContext('travel_request');
+        return;
+      }
+      appendMessage('assistant', 'Please share your travel plan in one message, including from city, to city, travel date, and passenger count.');
+      setInputContext('travel_request');
+    } catch (err) {
+      resetSearchSelectionState();
+      appendMessage('assistant', providerConnectionMessage(err.message || 'Unable to reach the travel assistant right now. Please try again.'));
+    } finally { setBusy(false); }
+  }
+
+
+  async function processPaymentReturnIfNeeded(forcedBookingRef, forcedPaymentDone){
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const bookingRef = String(forcedBookingRef || params.get('booking_ref') || '').trim();
+      const paymentDone = forcedPaymentDone ? '1' : String(params.get('payment_done') || '').trim();
+      if (!bookingRef || paymentDone !== '1') return;
+      if (lastPaymentHandledRef === bookingRef) return;
+      setBusy(true, 'Refreshing payment status...');
+
+      let data = null;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        data = await callBookingStatus(bookingRef);
+        const status = String((data && data.payment_status) || (data && data.status) || '').toUpperCase();
+        if (status === 'SUCCESS' || status === 'PAID' || status === 'PAYMENT_DONE') break;
+        if (attempt < 5) {
+          await new Promise(resolve => setTimeout(resolve, 700));
+        }
+      }
+
+      const status = String((data && data.payment_status) || (data && data.status) || '').toUpperCase();
+      if (status === 'SUCCESS' || status === 'PAID' || status === 'PAYMENT_DONE') {
+        lastPaymentHandledRef = bookingRef;
+        setInputContext('completed');
+        setChatInputLocked(true);
+        if (!updateExistingBookingCard(data, { hideCompletedButtons: true })) {
+          renderCompactBookingSummary(data);
+          document.querySelectorAll('.llm-parent-card[data-booking-ref] .assist-btn-row').forEach(el => disableElement(el, true));
+        }
+        appendPaymentCompletedActions(data);
+      } else if (data && data.user_message) {
+        appendMessage('assistant', data.user_message);
+      }
+
+      try { localStorage.removeItem(PAYMENT_EVENT_KEY); } catch (e) {}
+      params.delete('payment_done');
+      params.delete('booking_ref');
+      const clean = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+      window.history.replaceState({}, '', clean);
+    } catch (err) {
+      appendMessage('assistant', providerConnectionMessage(err.message || 'Unable to refresh payment status right now.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+
+  window.addEventListener('message', function(event){
+    try {
+      const payload = event && event.data ? event.data : {};
+      const payloadSessionId = String((payload && payload.session_id) || '').trim();
+      const sameSession = !payloadSessionId || payloadSessionId === String(SESSION_ID);
+      if (payload.type === 'PAYMENT_DONE' && sameSession && payload.booking_ref) {
+        processPaymentReturnIfNeeded(String(payload.booking_ref), true);
+      }
+    } catch (e) {}
+  });
+
+  window.addEventListener('storage', function(event){
+    try {
+      if (!event || event.key !== PAYMENT_EVENT_KEY || !event.newValue) return;
+      const payload = JSON.parse(String(event.newValue || '{}'));
+      if (payload && payload.booking_ref) processPaymentReturnIfNeeded(String(payload.booking_ref), true);
+    } catch (e) {}
+  });
+
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') {
+      try {
+        const raw = localStorage.getItem(PAYMENT_EVENT_KEY);
+        if (!raw) return;
+        const payload = JSON.parse(String(raw || '{}'));
+        if (payload && payload.booking_ref) processPaymentReturnIfNeeded(String(payload.booking_ref), true);
+      } catch (e) {}
+    }
+  });
+
+  try {
+    const startupParams = new URLSearchParams(window.location.search || '');
+    if (startupParams.get('fresh') === '1') {
+      clearFlowState();
+      const cleanStartupUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanStartupUrl);
+    }
+  } catch (e) {}
+
+  if (IS_BROWSER_RELOAD) {
+    clearFlowState();
+    setChatInputLocked(false);
+    input.value = '';
+    btn.textContent = 'Send';
+    input.placeholder = 'Type your travel request here...';
+  } else {
+    restoreState();
+  }
+
+if (!chatState.inputContext || typeof chatState.inputContext !== 'object') {
+  chatState.inputContext = { mode: 'travel_request' };
+}
+
+if (chatState.lastSearchResults && !chatState.selectedResult && !chatState.pendingMissingField && Array.isArray(chatState.lastSearchResults.results) && chatState.lastSearchResults.results.length > 0) {
+  chatState.inputContext = {
+    mode: 'flight_option',
+    option_count: chatState.lastSearchResults.results.length
+  };
+}
+
+if (chatState.inputContext && chatState.inputContext.mode === 'fare_option' && !document.querySelector('.llm-fare-parent')) {
+  chatState.inputContext = { mode: 'travel_request' };
+  saveState();
+}
+
+if (
+  chatState.inputContext &&
+  (chatState.inputContext.mode === 'traveler_action' ||
+   chatState.inputContext.mode === 'traveler_select' ||
+   chatState.inputContext.mode === 'traveler_review') &&
+  !document.querySelector('.llm-traveler-shell')
+) {
+  chatState.inputContext = { mode: 'travel_request' };
+  saveState();
+}
+
+if (
+  chatState.inputContext &&
+  chatState.inputContext.mode === 'booking_review' &&
+  !document.querySelector('[data-action="confirm-booking"], [data-action="cancel-booking"], [data-action="start-new-search"]')
+) {
+  chatState.inputContext = { mode: 'travel_request' };
+  saveState();
+}
+
+if (chatState.inputContext && chatState.inputContext.mode === 'payment_pending') {
+  const paymentCard = Array.from(document.querySelectorAll('.llm-parent-card'))
+    .find(el => /Payment Status:\s*PENDING/i.test(el.textContent || ''));
+  if (!paymentCard) {
+    chatState.inputContext = { mode: 'travel_request' };
+    saveState();
+  }
+}
+
+if (
+  chatState.bookingSummaryStage &&
+  String((chatState.bookingSummaryStage.payment_status || '')).toUpperCase() === 'SUCCESS'
+) {
+  setChatInputLocked(true);
+} else {
+  setInputContext(
+    (chatState.inputContext && chatState.inputContext.mode) || 'travel_request',
+    Object.assign({}, chatState.inputContext || {})
+  );
+}
+  if (!chatState.inputContext || typeof chatState.inputContext !== 'object') chatState.inputContext = { mode: 'travel_request' };
+  if (chatState.lastSearchResults && !chatState.selectedResult && !chatState.pendingMissingField && Array.isArray(chatState.lastSearchResults.results) && chatState.lastSearchResults.results.length > 0) {
+    chatState.inputContext = { mode: 'flight_option', option_count: chatState.lastSearchResults.results.length };
+  }
+  if (chatState.inputContext && chatState.inputContext.mode === 'fare_option' && !document.querySelector('.llm-fare-parent')) {
+    chatState.inputContext = { mode: 'travel_request' };
+    saveState();
+  }
+  if (chatState.inputContext && (chatState.inputContext.mode === 'traveler_action' || chatState.inputContext.mode === 'traveler_select' || chatState.inputContext.mode === 'traveler_review') && !document.querySelector('.llm-traveler-shell')) {
+    chatState.inputContext = { mode: 'travel_request' };
+    saveState();
+  }
+  if (chatState.inputContext && chatState.inputContext.mode === 'booking_review' && !document.querySelector('[data-action="confirm-booking"], [data-action="cancel-booking"], [data-action="start-new-search"]')) {
+    chatState.inputContext = { mode: 'travel_request' };
+    saveState();
+  }
+  if (chatState.inputContext && chatState.inputContext.mode === 'payment_pending') {
+    const paymentCard = Array.from(document.querySelectorAll('.llm-parent-card')).find(el => /Payment Status:\s*PENDING/i.test(el.textContent || ''));
+    if (!paymentCard) {
+      chatState.inputContext = { mode: 'travel_request' };
+      saveState();
+    }
+  }
+  if (chatState.bookingSummaryStage && String((chatState.bookingSummaryStage.payment_status || '')).toUpperCase() === 'SUCCESS') {
+    const hasCompletedCard = !!document.querySelector('.llm-parent-card[data-booking-ref]');
+    if (hasCompletedCard) {
+      setChatInputLocked(true);
+    } else {
+      clearFlowState();
+      setInputContext('travel_request');
+    }
+  } else {
+    setInputContext((chatState.inputContext && chatState.inputContext.mode) || 'travel_request', Object.assign({}, chatState.inputContext || {}));
+  }
+  processPaymentReturnIfNeeded();
+  if (initialSystemMsg) {
+    let intro = 'Hello, welcome to Smart Trip. Please enter your flight request in one message with route, date, travellers, cabin class, and currency. I will validate it and guide you step by step.';
+    if (chatState.pendingMissingField) intro = 'Welcome back. I still have your in-progress request and can continue from the last missing detail.';
+    initialSystemMsg.querySelector('.msg-body').textContent = intro;
+  }
+  btn.addEventListener('click', submitMessage);
+  input.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); submitMessage(); } });
+})();
+</script>
+{% endblock %}

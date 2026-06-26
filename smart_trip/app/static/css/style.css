@@ -1,0 +1,998 @@
+/* ---------------------------------------
+   Global base
+---------------------------------------- */
+/*-------- for testing css
+body { border: 10px solid red; }
+-----------*/
+/* .debug-skin { border: 6px solid purple; border-radius: 18px; padding: 10px; } */
+:root {
+  --bg: #f6f7fb;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: rgba(17, 24, 39, 0.10);
+  --card: #ffffff;
+  --shadow: 0 10px 25px rgba(0,0,0,0.06);
+  --shadow2: 0 14px 34px rgba(0,0,0,0.10);
+  --radius: 18px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: Arial, sans-serif;
+  background: radial-gradient(1200px 500px at 20% 0%, #eef2ff 0%, var(--bg) 45%, #fefefe 100%);
+  margin: 0;
+  color: var(--text);
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 28px 18px 60px;
+}
+
+/* ---------------------------------------
+   Utility classes (used by flight_search.html)
+---------------------------------------- */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.h1 {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+.h2 { font-size: 18px; font-weight: 900; }
+.muted { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.req { color: #b91c1c; font-weight: 900; }
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+.grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+@media (max-width: 860px) {
+  .grid-3 { grid-template-columns: 1fr; }
+}
+
+.user-chip { font-size: 13px; color: var(--muted); margin-right: 10px; }
+
+.kv {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.kv .k { color: var(--muted); font-weight: 700; font-size: 13px; }
+.kv .v { font-weight: 700; }
+
+/* ---------------------------------------
+   Page wrapper
+---------------------------------------- */
+.page {
+  width: 100%;
+}
+
+/* ---------------------------------------
+   Top bar (title + logout)
+---------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.brand-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.brand-subtitle {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------------------------------------
+   Cards layout
+---------------------------------------- */
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .cards { grid-template-columns: 1fr; }
+}
+
+/* ---------------------------------------
+   Card style (fancy)
+---------------------------------------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 18px 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.card.fancy::before {
+  content: "";
+  position: absolute;
+  inset: -60px -60px auto auto;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle at 40% 40%, rgba(99,102,241,0.22) 0%, rgba(99,102,241,0.0) 65%);
+  transform: rotate(12deg);  
+  pointer-events: none;   /* ✅ decorative layer never blocks inputs */
+  z-index: 0;             /* ✅ keep it behind content */
+}
+
+.card:hover {
+  box-shadow: var(--shadow2);
+  transform: translateY(-2px);
+  transition: 160ms ease;
+  z-index: 2; /* prevents "overlap" glitches when focusing inputs */
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.card-desc {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+  min-height: 64px;
+}
+
+.card-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ---------------------------------------
+   Badge / pill
+---------------------------------------- */
+.card-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(16,185,129,0.12);
+  color: #065f46;
+  border: 1px solid rgba(16,185,129,0.18);
+}
+
+.card-badge.alt {
+  background: rgba(99,102,241,0.12);
+  color: #3730a3;
+  border: 1px solid rgba(99,102,241,0.18);
+}
+
+/* ---------------------------------------
+   Buttons (visual, consistent)
+---------------------------------------- */
+.btn {
+  display: inline-block;
+  text-decoration: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 13px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  filter: brightness(0.98);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  filter: brightness(0.98);
+}
+
+.btn-ghost {
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  color: #111827;
+}
+
+.btn-ghost:hover {
+  background: rgba(100, 24, 39, 0.06);
+}
+
+/* ---------------------------------------
+   Form fields
+   - IMPORTANT: inputs must be width:100% in grid layouts, otherwise
+     the right-side fields get cut/hidden on smaller screens.
+---------------------------------------- */
+.field { margin-top: 12px; }
+.field label { display:block; font-size: 13px; margin-bottom: 6px; }
+.field .help {
+  margin-top: 6px;            /* small gap between input and hint */
+  font-size: 11px;            /* smaller than label */
+  line-height: 1.25;
+  color: rgba(17,24,39,0.55); /* muted */
+}
+.field input,
+.field select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+/* Small fields: make them narrower so right-side fields remain visible */
+.field-sm { max-width: 220px; }
+@media (max-width: 860px) { .field-sm { max-width: none; } }
+
+.error { margin-top: 12px; padding: 10px; border:1px solid #cc0000; border-radius: 10px; background:#ffecec; }
+
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+
+select { width: 100%; }
+
+.checks { margin-top: 10px; display: flex; gap: 16px; }
+.check { font-size: 14px; color: var(--text); }
+
+.doclist { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.docrow {
+  display: flex; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+.docrow-inactive { opacity: 0.65; }
+.doctitle { font-weight: 800; }
+.docmeta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+.pill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(17,24,39,0.04);
+}
+.pill-muted { color: var(--muted); }
+
+.notice {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 12px 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.notice.success {
+  background: rgba(16,185,129,0.12);
+  border-color: rgba(16,185,129,0.20);
+  color: #065f46;
+}
+
+.notice.error {
+  background: rgba(220,38,38,0.10);
+  border-color: rgba(220,38,38,0.18);
+  color: #991b1b;
+}
+
+/* ---------------------------------------
+   Modal popup (success / error)
+---------------------------------------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+.modal.modal-open { display: block; }
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.38);
+}
+
+.modal-box {
+  position: relative;
+  width: min(520px, calc(100% - 28px));
+  margin: 10vh auto 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow2);
+  overflow: hidden;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.modal-x {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(17, 24, 39, 0.04);
+  border-radius: 12px;
+  width: 36px;
+  height: 32px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.modal-actions {
+  padding: 12px 16px 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-success .modal-head {
+  background: rgba(16,185,129,0.10);
+}
+.modal-error .modal-head {
+  background: rgba(220,38,38,0.10);
+}
+
+
+/* ===== TT_AGENTIC Search Page Target Layout ===== */
+.tts-page-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:18px;
+}
+
+.tts-search-shell {
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.tts-top-controls {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.tts-inline-group {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.tts-radio-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  color:#374151;
+  cursor:pointer;
+}
+
+.tts-radio-chip input {
+  width:18px;
+  height:18px;
+  margin:0;
+}
+
+.tts-inline-select {
+  padding:8px 10px;
+  border:1px solid rgba(17,24,39,0.12);
+  border-radius:10px;
+  background:#fff;
+  font-size:14px;
+  min-width:150px;
+}
+
+.tts-search-bar {
+  display:grid;
+  grid-template-columns: 1.15fr 1.15fr .95fr .95fr 150px;
+  border:2px solid #febb02;
+  border-radius:14px;
+  overflow:hidden;
+  background:#fff;
+  box-shadow: var(--shadow);
+}
+
+.tts-search-cell {
+  border-right:1px solid rgba(17,24,39,0.10);
+  padding:12px 14px;
+  min-height:78px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+
+.tts-search-label {
+  font-size:12px;
+  color:#6b7280;
+  margin-bottom:5px;
+  font-weight:700;
+}
+
+.tts-search-control {
+  width:100%;
+  border:none !important;
+  outline:none;
+  background:transparent;
+  padding:0 !important;
+  font-size:15px;
+  font-weight:800;
+  color:#111827;
+  min-height:28px;
+}
+
+.tts-search-control[type="date"] {
+  font-family: Arial, sans-serif;
+}
+
+.tts-search-btn {
+  border:none;
+  background:#0071c2;
+  color:#fff;
+  font-size:17px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.tts-search-btn:hover {
+  filter:brightness(0.98);
+}
+
+.tts-advanced-grid {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:16px;
+}
+
+.tts-advanced-card {
+  background:#fff;
+  border:1px solid rgba(17,24,39,0.10);
+  border-radius:16px;
+  padding:16px;
+  box-shadow: var(--shadow);
+}
+
+.tts-advanced-title {
+  font-size:16px;
+  font-weight:800;
+  color:#111827;
+  margin-bottom:6px;
+}
+
+.tts-advanced-note {
+  font-size:13px;
+  color:#6b7280;
+  line-height:1.45;
+  margin-bottom:12px;
+}
+
+.tts-actions-row {
+  display:flex;
+  gap:10px;
+  margin-top:14px;
+  flex-wrap:wrap;
+}
+
+@media (max-width: 1100px) {
+  .tts-search-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tts-search-btn {
+    min-height:72px;
+  }
+}
+
+@media (max-width: 760px) {
+  .tts-page-head {
+    flex-direction:column;
+  }
+  .tts-search-bar {
+    grid-template-columns: 1fr;
+  }
+  .tts-search-cell {
+    border-right:none;
+    border-bottom:1px solid rgba(17,24,39,0.10);
+  }
+  .tts-advanced-grid {
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* ---------------------------------------
+   Final demo-safe ghost button styling
+   Purpose:
+   Keep ghost buttons readable in normal, hover, focus, and active states.
+---------------------------------------- */
+
+.btn-ghost,
+a.btn-ghost,
+button.btn-ghost {
+  background-color: rgba(17, 24, 39, 0.04) !important;
+  color: #111827 !important;
+  border: 1px solid rgba(17, 24, 39, 0.12) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+.btn-ghost:hover,
+.btn-ghost:focus,
+.btn-ghost:active,
+a.btn-ghost:hover,
+a.btn-ghost:focus,
+a.btn-ghost:active,
+button.btn-ghost:hover,
+button.btn-ghost:focus,
+button.btn-ghost:active {
+  background-color: rgba(17, 24, 39, 0.08) !important;
+  color: #111827 !important;
+  border: 1px solid rgba(17, 24, 39, 0.18) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+.btn-ghost,
+a.btn-ghost,
+button.btn-ghost {
+  background-color: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(29, 78, 216, 0.35) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+.btn-ghost:hover,
+.btn-ghost:focus,
+.btn-ghost:active,
+a.btn-ghost:hover,
+a.btn-ghost:focus,
+a.btn-ghost:active,
+button.btn-ghost:hover,
+button.btn-ghost:focus,
+button.btn-ghost:active {
+  background-color: rgba(29, 78, 216, 0.08) !important;
+  color: #1d4ed8 !important;
+  border-color: rgba(29, 78, 216, 0.55) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+/* =========================================================
+   SMART TRIP LAB DEMO - BUTTON CONSISTENCY PATCH
+   Purpose:
+   - Keep button labels visible in normal, hover, focus and active states.
+   - Support both old usage: class="btn secondary small"
+     and newer usage: class="btn btn-secondary btn-sm".
+   - Override inline template button colors safely without touching HTML.
+========================================================= */
+
+.btn,
+a.btn,
+button.btn,
+input.btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  min-height: 38px !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16) !important;
+}
+
+.btn:hover,
+a.btn:hover,
+button.btn:hover,
+input.btn:hover,
+.btn:focus,
+a.btn:focus,
+button.btn:focus,
+input.btn:focus,
+.btn:active,
+a.btn:active,
+button.btn:active,
+input.btn:active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  text-decoration: none !important;
+  filter: none !important;
+}
+
+.btn-primary,
+a.btn-primary,
+button.btn-primary,
+input.btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.btn-primary:hover,
+a.btn-primary:hover,
+button.btn-primary:hover,
+input.btn-primary:hover,
+.btn-primary:focus,
+a.btn-primary:focus,
+button.btn-primary:focus,
+input.btn-primary:focus,
+.btn-primary:active,
+a.btn-primary:active,
+button.btn-primary:active,
+input.btn-primary:active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+}
+
+/* Secondary/ghost style: supports both class="btn secondary" and class="btn btn-secondary" */
+.btn.secondary,
+a.btn.secondary,
+button.btn.secondary,
+input.btn.secondary,
+.btn-secondary,
+a.btn-secondary,
+button.btn-secondary,
+input.btn-secondary,
+.btn-ghost,
+a.btn-ghost,
+button.btn-ghost,
+input.btn-ghost {
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(29, 78, 216, 0.35) !important;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.08) !important;
+}
+
+.btn.secondary:hover,
+a.btn.secondary:hover,
+button.btn.secondary:hover,
+input.btn.secondary:hover,
+.btn-secondary:hover,
+a.btn-secondary:hover,
+button.btn-secondary:hover,
+input.btn-secondary:hover,
+.btn-ghost:hover,
+a.btn-ghost:hover,
+button.btn-ghost:hover,
+input.btn-ghost:hover,
+.btn.secondary:focus,
+a.btn.secondary:focus,
+button.btn.secondary:focus,
+input.btn.secondary:focus,
+.btn-secondary:focus,
+a.btn-secondary:focus,
+button.btn-secondary:focus,
+input.btn-secondary:focus,
+.btn-ghost:focus,
+a.btn-ghost:focus,
+button.btn-ghost:focus,
+input.btn-ghost:focus,
+.btn.secondary:active,
+a.btn.secondary:active,
+button.btn.secondary:active,
+input.btn.secondary:active,
+.btn-secondary:active,
+a.btn-secondary:active,
+button.btn-secondary:active,
+input.btn-secondary:active,
+.btn-ghost:active,
+a.btn-ghost:active,
+button.btn-ghost:active,
+input.btn-ghost:active {
+  background: rgba(29, 78, 216, 0.08) !important;
+  color: #1d4ed8 !important;
+  border-color: rgba(29, 78, 216, 0.55) !important;
+  text-decoration: none !important;
+  filter: none !important;
+}
+
+/* Small button compatibility: supports class="btn small" and class="btn btn-sm" */
+.btn.small,
+a.btn.small,
+button.btn.small,
+input.btn.small,
+.btn-sm,
+a.btn-sm,
+button.btn-sm,
+input.btn-sm {
+  min-height: 32px !important;
+  padding: 7px 10px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+}
+
+/* Flight search large search button */
+.fs-search-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.fs-search-btn:hover,
+.fs-search-btn:focus,
+.fs-search-btn:active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+}
+
+/* LLM chat action buttons */
+.assist-small-btn,
+a.assist-small-btn,
+button.assist-small-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-height: 36px !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(29, 78, 216, 0.35) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.assist-small-btn:hover,
+a.assist-small-btn:hover,
+button.assist-small-btn:hover,
+.assist-small-btn:focus,
+a.assist-small-btn:focus,
+button.assist-small-btn:focus,
+.assist-small-btn:active,
+a.assist-small-btn:active,
+button.assist-small-btn:active {
+  background: rgba(29, 78, 216, 0.08) !important;
+  color: #1d4ed8 !important;
+  border-color: rgba(29, 78, 216, 0.55) !important;
+  text-decoration: none !important;
+}
+
+/* Trace page buttons, even though trace.html has inline page CSS */
+.trace-btn,
+a.trace-btn,
+button.trace-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 38px !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(29, 78, 216, 0.35) !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+.trace-btn.primary,
+button.trace-btn.primary,
+a.trace-btn.primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.trace-btn:hover,
+a.trace-btn:hover,
+button.trace-btn:hover,
+.trace-btn:focus,
+a.trace-btn:focus,
+button.trace-btn:focus,
+.trace-btn:active,
+a.trace-btn:active,
+button.trace-btn:active {
+  text-decoration: none !important;
+  filter: none !important;
+}
+
+.trace-btn.primary:hover,
+button.trace-btn.primary:hover,
+a.trace-btn.primary:hover,
+.trace-btn.primary:focus,
+button.trace-btn.primary:focus,
+a.trace-btn.primary:focus,
+.trace-btn.primary:active,
+button.trace-btn.primary:active,
+a.trace-btn.primary:active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+}
+
+/* Disabled/locked controls must remain readable */
+.btn:disabled,
+button.btn:disabled,
+input.btn:disabled,
+.btn[disabled],
+button.btn[disabled],
+input.btn[disabled],
+.assist-small-btn:disabled,
+button.assist-small-btn:disabled,
+.assist-small-btn[disabled],
+button.assist-small-btn[disabled],
+.fs-search-btn:disabled,
+button.fs-search-btn:disabled,
+.trace-btn:disabled,
+button.trace-btn:disabled {
+  background: #e5e7eb !important;
+  color: #6b7280 !important;
+  border-color: #d1d5db !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+/* =========================================================
+   FINAL BOOKING SUMMARY HERO BUTTON HOVER FIX
+   Page: /portal/flight/booking-summary
+   Buttons: New Search, Home
+   Purpose: keep label visible on hover/focus/active.
+========================================================= */
+.bk-hero a.btn.btn-ghost,
+.bk-hero a.btn.btn-ghost:visited {
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(29, 78, 216, 0.35) !important;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.10) !important;
+  text-decoration: none !important;
+}
+
+.bk-hero a.btn.btn-ghost:hover,
+.bk-hero a.btn.btn-ghost:focus,
+.bk-hero a.btn.btn-ghost:active {
+  background: #eaf2ff !important;
+  color: #0a4bb3 !important;
+  border-color: rgba(10, 75, 179, 0.55) !important;
+  text-decoration: none !important;
+  filter: none !important;
+}
+
+/* =========================================================
+   FINAL ITINERARY HERO BUTTON HOVER FIX
+   Page: /portal/flight/itinerary
+   Button: Back to Summary
+   Purpose: keep label visible on hover/focus/active.
+========================================================= */
+.it-hero a.btn.secondary,
+.it-hero a.btn.secondary:visited {
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(29, 78, 216, 0.35) !important;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.10) !important;
+  text-decoration: none !important;
+}
+
+.it-hero a.btn.secondary:hover,
+.it-hero a.btn.secondary:focus,
+.it-hero a.btn.secondary:active {
+  background: #eaf2ff !important;
+  color: #0a4bb3 !important;
+  border-color: rgba(10, 75, 179, 0.55) !important;
+  text-decoration: none !important;
+  filter: none !important;
+}
+
+/* =========================================================
+   LLM CHAT SELECTED STATE - DEMO GREEN HIGHLIGHT
+   Visual-only change. No workflow logic change.
+========================================================= */
+
+/* selected flight card */
+.llm-card.llm-flight-selected {
+  border-color: #22c55e !important;
+  background: #f0fdf4 !important;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.16) !important;
+}
+
+/* selected flight button */
+.llm-card.llm-flight-selected .llm-select-option-btn,
+.llm-card.llm-flight-selected [data-action="select-option"] {
+  background: #16a34a !important;
+  border-color: #15803d !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.22) !important;
+  opacity: 1 !important;
+}
+
+/* selected fare card */
+.llm-fare-card.active {
+  border-color: #22c55e !important;
+  background: #f0fdf4 !important;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.16) !important;
+  opacity: 1 !important;
+}
+
+/* selected fare radio/check indicator */
+.llm-fare-card.active input[type="radio"] {
+  accent-color: #16a34a !important;
+}
+
+/* selected + locked fare card should still look selected, not grey */
+.llm-fare-card.active.llm-control-locked {
+  border-color: #22c55e !important;
+  background: #f0fdf4 !important;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.16) !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+

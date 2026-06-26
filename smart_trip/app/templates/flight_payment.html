@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:600px;margin:40px auto;background:#fff;padding:24px;border-radius:12px;border:1px solid #ddd;">
+  {% set _flow_mode = (flow_mode or request.query_params.get('flow_mode') or request.form().get('flow_mode') if false else flow_mode) %}
+  {% set _session_id = session_id or request.query_params.get('session_id') %}
+  <h2>Payment</h2>
+
+  {% if payment_status and payment_status|string|upper == 'SUCCESS' %}
+    <p><b>Booking Ref:</b> {{ booking_ref }}</p>
+    <p><b>Payment Status:</b> {{ payment_status }}</p>
+    <p><b>Payment Ref:</b> {{ payment_ref or '' }}</p>
+
+    <script>
+      (function () {
+        const bookingRef = {{ booking_ref|tojson }};
+        const sessionId = {{ (session_id or request.query_params.get('session_id') or '')|tojson }};
+        const flowMode = {{ (flow_mode or request.query_params.get('flow_mode') or 'GUI')|tojson }};
+
+        if (String(flowMode).toUpperCase() === 'LLM') {
+          try {
+            localStorage.setItem(`tt_llm_payment_done_${sessionId}`, JSON.stringify({
+              booking_ref: bookingRef,
+              session_id: String(sessionId),
+              at: Date.now()
+            }));
+          } catch (e) {}
+
+          try {
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage({
+                type: 'PAYMENT_DONE',
+                booking_ref: bookingRef,
+                session_id: String(sessionId)
+              }, window.location.origin);
+            }
+          } catch (e) {}
+
+          setTimeout(function () {
+            try { window.close(); } catch (e) {}
+            if (!window.closed) {
+              try { window.open('', '_self'); } catch (e) {}
+              try { window.close(); } catch (e) {}
+            }
+            if (!window.closed) {
+              var note = document.createElement('p');
+              note.style.marginTop = '16px';
+              note.style.color = '#166534';
+              note.style.fontWeight = '700';
+              note.textContent = 'Payment completed successfully. This tab can now be closed.';
+              document.querySelector('div[style*="max-width:600px"]')?.appendChild(note);
+            }
+          }, 300);
+        } else {
+          window.location.replace(`/portal/flight/booking-summary?booking_ref=${encodeURIComponent(String(bookingRef || ''))}`);
+        }
+      })();
+    </script>
+  {% else %}
+    <p><b>Booking Ref:</b> {{ booking_ref }}</p>
+    <p><b>Amount:</b> {{ amount }} {{ currency }}</p>
+
+    <form method="post">
+      <input type="hidden" name="flow_mode" value="{{ flow_mode or request.query_params.get('flow_mode') or 'GUI' }}">
+      <input type="hidden" name="booking_ref" value="{{ booking_ref }}">
+      <input type="hidden" name="session_id" value="{{ session_id or request.query_params.get('session_id') or '' }}">
+      <label>Payment Method</label><br><br>
+      <select name="payment_method" required>
+        <option value="MOCK_CARD">MOCK_CARD</option>
+      </select>
+
+      <br><br>
+
+      <button type="submit"
+        style="padding:10px 16px;background:#0a4bb3;color:#fff;border:none;border-radius:8px;">
+        Pay Now
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+{% endblock %}

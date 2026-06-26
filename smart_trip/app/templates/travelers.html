@@ -1,0 +1,641 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .container{
+    max-width: 80vw !important;
+    width: 80vw !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    margin: 0 auto !important;
+  }
+
+  .page-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .page-title{
+    font-size:30px;
+    font-weight:800;
+    color:#111827;
+    letter-spacing:.2px;
+  }
+
+  .page-sub{
+    color:#6b7280;
+    margin-top:4px;
+    font-size:14px;
+  }
+
+  .card{
+    background:#fff;
+    border-radius:18px;
+    border:1px solid rgba(17,24,39,.08);
+    padding:18px;
+    margin-bottom:20px;
+    box-shadow:0 6px 18px rgba(0,0,0,.06);
+  }
+
+  .stats{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .stat{
+    background:linear-gradient(180deg,#f9fafb 0%, #f3f4f6 100%);
+    padding:9px 15px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+    color:#111827;
+    border:1px solid #e5e7eb;
+  }
+
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+
+  .section-title{
+    font-size:20px;
+    font-weight:800;
+    color:#111827;
+    margin:0;
+    line-height:1.2;
+  }
+
+  .section-sub{
+    font-size:13px;
+    color:#6b7280;
+    margin-top:4px;
+  }
+
+  .title-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    color:#111827;
+    border-radius:999px;
+    padding:7px 12px;
+    font-size:12px;
+    font-weight:700;
+  }
+
+  .table-wrap{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+  }
+
+  table{
+    width:max-content;
+    min-width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+
+  th{
+    background:#f8fafc;
+    text-align:left;
+    padding:10px 12px;
+    border-bottom:1px solid #e5e7eb;
+    font-weight:800;
+    white-space:nowrap;
+    color:#111827;
+    vertical-align:bottom;
+  }
+
+  td{
+    padding:9px 12px;
+    border-bottom:1px solid #f1f5f9;
+    white-space:nowrap;
+    vertical-align:middle;
+    color:#111827;
+  }
+
+  tr:hover{
+    background:#fafafa;
+  }
+
+  .btn{
+    background:#111827;
+    color:white;
+    border:none;
+    padding:7px 12px;
+    border-radius:8px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:600;
+    text-decoration:none;
+    display:inline-block;
+    line-height:1.2;
+  }
+
+  .btn.secondary{
+    background:#fff;
+    color:#111827;
+    border:1px solid #d1d5db;
+  }
+
+  .btn.small{
+    padding:6px 10px;
+    font-size:12px;
+  }
+
+  .cell-check{
+    text-align:center;
+    width:72px;
+  }
+
+  .grid-check{
+    width:14px;
+    height:14px;
+    accent-color:#111827;
+    vertical-align:middle;
+  }
+
+  .actions{
+    display:flex;
+    gap:6px;
+    flex-wrap:nowrap;
+  }
+
+  .form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+  }
+
+  .field label{
+    font-size:12px;
+    font-weight:700;
+    margin-bottom:5px;
+    color:#111827;
+  }
+
+  input,select{
+    height:38px;
+    padding:6px 10px;
+    border-radius:8px;
+    border:1px solid #d1d5db;
+    font-size:14px;
+    background:#fff;
+  }
+
+  .form-check-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-height:38px;
+    padding-top:20px;
+  }
+
+  .form-check-row input[type="checkbox"]{
+    width:14px;
+    height:14px;
+    margin:0;
+    accent-color:#111827;
+  }
+
+  .form-check-row label{
+    margin:0;
+    font-size:13px;
+    font-weight:700;
+    color:#111827;
+  }
+
+  .muted{
+    color:#6b7280;
+  }
+
+  .tiny-head{
+    display:inline-block;
+    line-height:1.15;
+    text-align:center;
+    min-width:56px;
+  }
+
+  .form-title-wrap{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+
+  .form-title-main{
+    font-size:20px;
+    font-weight:800;
+    color:#111827;
+    margin:0;
+    line-height:1.2;
+  }
+
+  .form-title-sub{
+    margin-top:4px;
+    font-size:13px;
+    color:#6b7280;
+  }
+
+  .name-chip{
+    display:inline-flex;
+    align-items:left;
+    background:#eef2ff;
+    color:#3730a3;
+    border:1px solid #c7d2fe;
+    border-radius:999px;
+    padding:7px 7px;
+    font-size:12px;
+    font-weight:700;
+  }
+
+  .msg-box{
+    margin-bottom:14px;
+    padding:10px 12px;
+    border-radius:12px;
+    font-size:14px;
+    font-weight:600;
+  }
+
+  .msg-success{
+    background:rgba(16,185,129,.08);
+    border:1px solid rgba(16,185,129,.24);
+    color:#065f46;
+  }
+
+  .msg-error{
+    background:rgba(239,68,68,.08);
+    border:1px solid rgba(239,68,68,.24);
+    color:#991b1b;
+  }
+</style>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Traveler Management</div>
+    <div class="page-sub">
+      Manage traveler records used for booking autofill and passenger selection
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    {% if return_to == 'confirm' and form_data.agent_fsr_id %}
+      <a href="/portal/flight/confirm?agent_fsr_id={{ form_data.agent_fsr_id }}" class="btn secondary">Back</a>
+    {% elif return_to == 'confirm' %}
+      <a href="/portal/flight/search" class="btn secondary">Back</a>
+    {% else %}
+      <a href="/portal/flight/search" class="btn secondary">Back</a>
+    {% endif %}
+
+    <a href="/travelers{% if return_to or form_data.agent_fsr_id %}?{% if return_to %}return_to={{ return_to }}{% endif %}{% if return_to and form_data.agent_fsr_id %}&{% endif %}{% if form_data.agent_fsr_id %}agent_fsr_id={{ form_data.agent_fsr_id }}{% endif %}{% endif %}" class="btn secondary">Reset</a>
+  </div>
+</div>
+
+{% if page_msg %}
+  <div class="msg-box msg-success">{{ page_msg }}</div>
+{% endif %}
+
+{% if page_error %}
+  <div class="msg-box msg-error">{{ page_error }}</div>
+{% endif %}
+
+<div class="card">
+  <div class="stats">
+    <div class="stat">Total: {{ travelers|length }}</div>
+    <div class="stat">Primary: {{ travelers|selectattr('is_primary','equalto',1)|list|length }}</div>
+    <div class="stat">Active: {{ travelers|selectattr('is_active','equalto',1)|list|length }}</div>
+    <div class="stat">Adult: {{ travelers|selectattr('traveler_type','equalto','Adult')|list|length }}</div>
+    <div class="stat">Child: {{ travelers|selectattr('traveler_type','equalto','Child')|list|length }}</div>
+    <div class="stat">Infant: {{ travelers|selectattr('traveler_type','equalto','Infant')|list|length }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-head">
+    <div>
+      <div class="section-title">Traveler List</div>
+      <div class="section-sub">
+        Under User
+        <span class="title-badge">{{ current_user["username"] }}</span>
+      </div>
+    </div>
+
+    <div class="title-badge">
+      Scroll horizontally to view all columns
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Edit</th>
+          <th class="cell-check">Primary</th>
+          <th class="cell-check">Active</th>
+          <th>Type</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>DOB</th>
+          <th>Gender</th>
+          <th>Nationality</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Doc Type</th>
+          <th>Doc Number</th>
+          <th>Issue Country</th>
+          <th>Issue Date</th>
+          <th>Expiry</th>
+          <th>Currency</th>
+          <th>Language</th>
+          <th>Seat</th>
+          <th>Meal</th>
+          <th class="cell-check"><span class="tiny-head">Notify<br>SMS</span></th>
+          <th class="cell-check"><span class="tiny-head">Notify<br>Email</span></th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in travelers %}
+        <tr>
+          <td>
+            <a class="btn secondary small" href="/travelers?edit_id={{ row.document_id }}{% if return_to %}&return_to={{ return_to }}{% endif %}{% if form_data.agent_fsr_id %}&agent_fsr_id={{ form_data.agent_fsr_id }}{% endif %}">Edit</a>
+          </td>
+
+          <td class="cell-check">
+            <input type="checkbox" class="grid-check" {% if row.is_primary == 1 %}checked{% endif %} disabled>
+          </td>
+
+          <td class="cell-check">
+            <input type="checkbox" class="grid-check" {% if row.is_active == 1 %}checked{% endif %} disabled>
+          </td>
+
+          <td>{{ row.traveler_type or "" }}</td>
+          <td>{{ row.first_name or "" }}</td>
+          <td>{{ row.last_name or "" }}</td>
+          <td>{{ row.date_of_birth or "" }}</td>
+          <td>{{ row.gender or "" }}</td>
+          <td>{{ row.nationality_iso2 or "" }}</td>
+          <td>{{ row.email or "" }}</td>
+
+          <td>
+            {% if row.phone_iso_code %}+{{ row.phone_iso_code }} {% endif %}{{ row.phone or "" }}
+          </td>
+
+          <td>{{ row.document_type or "" }}</td>
+          <td>{{ row.document_number or "" }}</td>
+          <td>{{ row.issuing_country_iso2 or "" }}</td>
+          <td>{{ row.issue_date or "" }}</td>
+          <td>{{ row.expiry_date or "" }}</td>
+          <td>{{ row.preferred_currency or "" }}</td>
+          <td>{{ row.preferred_language or "" }}</td>
+          <td>{{ row.seat_preference or "" }}</td>
+          <td>{{ row.meal_preference or "" }}</td>
+
+          <td class="cell-check">
+            <input type="checkbox" class="grid-check" {% if row.notify_sms == 1 %}checked{% endif %} disabled>
+          </td>
+
+          <td class="cell-check">
+            <input type="checkbox" class="grid-check" {% if row.notify_email == 1 %}checked{% endif %} disabled>
+          </td>
+
+          <td>
+            <div class="actions">
+              <form method="post" action="/travelers/set-primary" style="margin:0;">
+                <input type="hidden" name="document_id" value="{{ row.document_id }}">
+                <input type="hidden" name="return_to" value="{{ return_to }}">
+                <input type="hidden" name="agent_fsr_id" value="{{ form_data.agent_fsr_id }}">
+                <button class="btn secondary small" type="submit">Primary</button>
+              </form>
+
+              <form method="post" action="/travelers/toggle-active" style="margin:0;">
+                <input type="hidden" name="document_id" value="{{ row.document_id }}">
+                <input type="hidden" name="return_to" value="{{ return_to }}">
+                <input type="hidden" name="agent_fsr_id" value="{{ form_data.agent_fsr_id }}">
+                <button class="btn secondary small" type="submit">
+                  {% if row.is_active == 1 %}Deactivate{% else %}Activate{% endif %}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if not travelers %}
+        <tr>
+          <td colspan="23" class="muted">No traveler records found.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="form-title-wrap">
+    <div>
+      <div class="form-title-main">
+        {% if edit_mode %}
+          Edit Traveler
+          {% if form_data.first_name or form_data.last_name %}
+            <span class="name-chip" style="margin-left:8px;">
+              {{ form_data.first_name }} {{ form_data.last_name }}
+            </span>
+          {% endif %}
+        {% else %}
+          Add Traveler
+        {% endif %}
+      </div>
+
+      <div class="form-title-sub">
+        {% if edit_mode %}
+          Update the selected traveler
+        {% else %}
+          Enter traveler profile, document, contact, and preference details
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="/travelers/save">
+    <input type="hidden" name="document_id" value="{{ form_data.document_id }}">
+    <input type="hidden" name="return_to" value="{{ return_to }}">
+    <input type="hidden" name="agent_fsr_id" value="{{ form_data.agent_fsr_id }}">
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Traveler Type</label>
+        <select name="traveler_type">
+          {% for x in traveler_type_options %}
+          <option value="{{ x }}" {% if form_data.traveler_type == x %}selected{% endif %}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>First Name</label>
+        <input name="first_name" value="{{ form_data.first_name }}">
+      </div>
+
+      <div class="field">
+        <label>Last Name</label>
+        <input name="last_name" value="{{ form_data.last_name }}">
+      </div>
+
+      <div class="field">
+        <label>Date of Birth</label>
+        <input type="date" name="date_of_birth" value="{{ form_data.date_of_birth }}">
+      </div>
+
+      <div class="field">
+        <label>Gender</label>
+        <select name="gender">
+          <option value=""></option>
+          {% for x in gender_options %}
+          <option value="{{ x }}" {% if form_data.gender == x %}selected{% endif %}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Nationality</label>
+        <input name="nationality_iso2" value="{{ form_data.nationality_iso2 }}">
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input name="email" value="{{ form_data.email }}">
+      </div>
+
+      <div class="field">
+        <label>Phone</label>
+        <input name="phone" value="{{ form_data.phone }}">
+      </div>
+
+      <div class="field">
+        <label>Phone ISO</label>
+        <input name="phone_iso_code" value="{{ form_data.phone_iso_code }}">
+      </div>
+
+      <div class="field">
+        <label>Phone STD</label>
+        <input name="phone_std_code" value="{{ form_data.phone_std_code }}">
+      </div>
+
+      <div class="field">
+        <label>Document Type</label>
+        <select name="document_type">
+          {% for x in document_type_options %}
+          <option value="{{ x }}" {% if form_data.document_type == x %}selected{% endif %}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Document Number</label>
+        <input name="document_number" value="{{ form_data.document_number }}">
+      </div>
+
+      <div class="field">
+        <label>Issuing Country</label>
+        <input name="issuing_country_iso2" value="{{ form_data.issuing_country_iso2 }}">
+      </div>
+
+      <div class="field">
+        <label>Issue Date</label>
+        <input type="date" name="issue_date" value="{{ form_data.issue_date }}">
+      </div>
+
+      <div class="field">
+        <label>Expiry Date</label>
+        <input type="date" name="expiry_date" value="{{ form_data.expiry_date }}">
+      </div>
+
+      <div class="field">
+        <label>Seat Preference</label>
+        <select name="seat_preference">
+          {% for x in seat_options %}
+          <option value="{{ x }}" {% if form_data.seat_preference == x %}selected{% endif %}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Meal Preference</label>
+        <select name="meal_preference">
+          {% for x in meal_options %}
+          <option value="{{ x }}" {% if form_data.meal_preference == x %}selected{% endif %}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Preferred Currency</label>
+        <select name="preferred_currency">
+          {% for x in currency_options %}
+          <option value="{{ x }}" {% if form_data.preferred_currency == x %}selected{% endif %}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Preferred Language</label>
+        <select name="preferred_language">
+          {% for x in language_options %}
+          <option value="{{ x }}" {% if form_data.preferred_language == x %}selected{% endif %}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-check-row">
+        <input type="checkbox" name="notify_email" {% if form_data.notify_email == '1' %}checked{% endif %}>
+        <label>Notify Email</label>
+      </div>
+
+      <div class="form-check-row">
+        <input type="checkbox" name="notify_sms" {% if form_data.notify_sms == '1' %}checked{% endif %}>
+        <label>Notify SMS</label>
+      </div>
+
+      <div class="form-check-row">
+        <input type="checkbox" name="is_primary" {% if form_data.is_primary == '1' %}checked{% endif %}>
+        <label>Primary Traveler</label>
+      </div>
+
+      <div class="form-check-row">
+        <input type="checkbox" name="is_active" {% if form_data.is_active == '1' %}checked{% endif %}>
+        <label>Active</label>
+      </div>
+    </div>
+
+    <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn" type="submit">
+        {% if edit_mode %}Update Traveler{% else %}Save Traveler{% endif %}
+      </button>
+      <a href="/travelers{% if return_to or form_data.agent_fsr_id %}?{% if return_to %}return_to={{ return_to }}{% endif %}{% if return_to and form_data.agent_fsr_id %}&{% endif %}{% if form_data.agent_fsr_id %}agent_fsr_id={{ form_data.agent_fsr_id }}{% endif %}{% endif %}" class="btn secondary">Clear</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

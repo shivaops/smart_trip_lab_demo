@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .it-wrap { max-width: 1120px; margin: 0 auto; }
+  .it-hero { background: #0a4bb3; color: #fff; border-radius: 20px; padding: 26px 28px; display:flex; justify-content:space-between; gap:18px; align-items:flex-end; flex-wrap:wrap; }
+  .it-hero h1 { margin:0; font-size:32px; line-height:1.1; }
+  .it-hero .sub { margin-top:8px; opacity:.92; }
+  .it-actions { display:flex; gap:10px; flex-wrap:wrap; }
+  .it-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:18px; }
+  .it-card, .it-section { background:#fff; border:1px solid #d9e1ef; border-radius:18px; }
+  .it-card { padding:18px; }
+  .it-label { font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:.06em; }
+  .it-value { font-size:25px; font-weight:800; margin-top:8px; line-height:1.2; }
+  .it-sub { color:#475569; margin-top:8px; line-height:1.45; }
+  .it-section { padding:18px; margin-top:20px; }
+  .it-section h2 { margin:0 0 14px; }
+  .it-segments, .it-pax { display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:14px; }
+  .it-seg, .it-pax-card { border:1px solid #d9e1ef; border-radius:16px; padding:16px; background:#fafcff; }
+  .it-seg-title, .it-pax-name { font-size:18px; font-weight:800; margin-bottom:10px; }
+  .it-kv { display:grid; grid-template-columns: 130px minmax(0,1fr); gap:8px 12px; }
+  .it-k { color:#475569; font-size:13px; font-weight:700; }
+  .it-v { color:#0f172a; font-size:14px; line-height:1.45; word-break:break-word; }
+  .it-chip { display:inline-flex; border-radius:999px; background:#eff6ff; color:#0a4bb3; border:1px solid #cfe0ff; padding:4px 10px; font-size:12px; font-weight:700; margin-right:6px; }
+  .it-mini { margin-top:10px; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; }
+  .it-mini .box { border:1px solid #d9e1ef; border-radius:12px; padding:10px 12px; background:#fff; }
+  @media print { .it-actions, .popup-backdrop { display:none !important; } body { background:#fff; } .container { max-width:none; } }
+</style>
+
+{% set bs = itinerary_view.booking_summary or {} %}
+<div class="it-wrap">
+  <div class="it-hero">
+    <div>
+      <div class="it-label" style="color:#dbeafe;">Travel Itinerary</div>
+      <h1>{{ bs.booking_reference or booking_ref }}</h1>
+      <div class="sub">Payment {{ bs.payment_status or bs.booking_payment_status or booking_view.payment_status or '-' }} · Booking {{ bs.booking_status or booking_view.booking_status or '-' }}</div>
+    </div>
+    <div class="it-actions">
+      {% if not download_mode %}
+      <a class="btn secondary" href="/portal/flight/booking-summary?booking_ref={{ booking_ref }}">Back to Summary</a>
+      <a class="btn" href="/portal/flight/itinerary/download?booking_ref={{ booking_ref }}">Download Itinerary</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="it-grid">
+    <div class="it-card">
+      <div class="it-label">Booking Reference</div>
+      <div class="it-value">{{ bs.booking_reference or booking_ref }}</div>
+      <div class="it-sub">Provider / Airline Ref: {{ booking_view.provider_booking_ref or bs.booking_reference or '-' }}</div>
+    </div>
+    <div class="it-card">
+      <div class="it-label">Trip & Travellers</div>
+      <div class="it-value">{{ bs.trip_type or booking_view.confirmed_journey.trip_type or '-' }}</div>
+      <div class="it-sub">{{ bs.total_pax_count or booking_view.confirmed_journey.passenger_count or 0 }} traveller(s)</div>
+    </div>
+    <div class="it-card">
+      <div class="it-label">Total Amount</div>
+      <div class="it-value">{{ bs.booking_total_amount or booking_view.confirmed_journey.total_amount or '-' }} {{ bs.booking_currency or booking_view.confirmed_journey.currency or '' }}</div>
+      <div class="it-sub">Booked on {{ bs.booking_date or booking_view.created_at or '-' }}</div>
+    </div>
+    <div class="it-card">
+      <div class="it-label">Contact</div>
+      <div class="it-value" style="font-size:15px;">{{ bs.booking_contact_email or booking_view.passengers[0].email if booking_view.passengers else '-' }}</div>
+      <div class="it-sub">{{ bs.booking_contact_phone or booking_view.passengers[0].phone if booking_view.passengers else '-' }}</div>
+    </div>
+  </div>
+
+  <div class="it-section">
+    <h2>Journey Details</h2>
+    <div class="it-segments">
+      {% for seg in itinerary_view.segments %}
+      <div class="it-seg">
+        <div class="it-seg-title">{{ 'Outbound' if loop.index == 1 else 'Return' }} · {{ seg.airline_name or '-' }} {{ seg.flight_number or '-' }}</div>
+        <div style="margin-bottom:10px;">
+          <span class="it-chip">{{ seg.cabin_class or '-' }}</span>
+          <span class="it-chip">{{ seg.segment_status or '-' }}</span>
+          {% if seg.fare_family_name %}<span class="it-chip">{{ seg.fare_family_name }}</span>{% endif %}
+        </div>
+        <div class="it-kv">
+          <div class="it-k">Departure</div><div class="it-v">{{ seg.dep_airport_display or seg.dep_airport_code or '-' }}<br>{{ seg.scheduled_departure or '-' }}{% if seg.terminal_departure %}<br>Terminal {{ seg.terminal_departure }}{% endif %}</div>
+          <div class="it-k">Arrival</div><div class="it-v">{{ seg.arr_airport_display or seg.arr_airport_code or '-' }}<br>{{ seg.scheduled_arrival or '-' }}{% if seg.terminal_arrival %}<br>Terminal {{ seg.terminal_arrival }}{% endif %}</div>
+        </div>
+        <div class="it-mini">
+          <div class="box"><div class="it-label">Cabin Bag</div><div class="it-sub">{{ seg.cabin_baggage or '-' }}</div></div>
+          <div class="box"><div class="it-label">Check-in Bag</div><div class="it-sub">{{ seg.checkin_baggage or '-' }}</div></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="it-section">
+    <h2>Passenger Details</h2>
+    <div class="it-pax">
+      {% for pax in itinerary_view.passengers %}
+      <div class="it-pax-card">
+        <div class="it-pax-name">{{ pax.passenger_name or '-' }}</div>
+        <div class="it-kv">
+          <div class="it-k">Passenger Type</div><div class="it-v">{{ pax.passenger_type or '-' }}</div>
+          <div class="it-k">Nationality</div><div class="it-v">{{ pax.nationality_iso2 or '-' }}</div>
+          <div class="it-k">Document</div><div class="it-v">{{ pax.document_type or '-' }} {{ pax.document_number or '' }}</div>
+          <div class="it-k">Document Expiry</div><div class="it-v">{{ pax.document_expiry or '-' }}</div>
+        </div>
+        {% if pax.segments %}
+        <div style="margin-top:14px;">
+          {% for seg in pax.segments %}
+          <div class="box" style="margin-bottom:10px; border:1px solid #d9e1ef; border-radius:12px; padding:12px; background:#fff;">
+            <div class="it-label">Segment {{ seg.sequence_no or loop.index }}</div>
+            <div class="it-sub">Ticket: {{ seg.ticket_number or '-' }}{% if seg.coupon_number %} · Coupon {{ seg.coupon_number }}{% endif %}</div>
+            <div class="it-sub">Seat: {{ seg.seat_assignment or '-' }} · Status: {{ seg.segment_passenger_status or '-' }}</div>
+            {% if seg.meal_code or seg.ssr_code %}<div class="it-sub">Meal: {{ seg.meal_code or '-' }} · SSR: {{ seg.ssr_code or '-' }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

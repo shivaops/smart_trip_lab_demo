@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{#
+  travel_docs.html
+  Variables:
+  - docs: list of document dicts from DB
+  - current_user: logged-in user
+  - doc_types: dropdown options from travel_doc_type_rule
+  - form_data: (optional) dict passed by GET edit-mode OR POST error render to preserve user input
+  - edit_mode: True/False
+#}
+
+{% block content %}
+
+<div class="page">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-title">{{ title }}</div>
+      <div class="brand-subtitle">Travel Documents</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="user-chip">
+        Signed in as <b>{{ current_user.first_name }} {{ current_user.last_name }}</b>
+      </div>
+      <a class="btn btn-ghost" href="/profile">Back</a>
+      <a class="btn btn-ghost" href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card fancy">
+
+      <div class="card-title">
+        {% if edit_mode %}Edit Document{% else %}Add Document{% endif %}
+      </div>
+
+      <div class="card-desc">
+        {% if edit_mode %}
+          Update your document details. Document Type and Document Number are locked.
+        {% else %}
+          Add passport/visa details to speed up booking forms later.
+        {% endif %}
+      </div>
+
+      <form method="post" action="/profile/travel-docs/add">
+        {# When editing, we pass document_id so POST knows this is edit mode #}
+        {% if form_data and form_data.document_id %}
+          <input type="hidden" name="document_id" value="{{ form_data.document_id }}">
+        {% endif %}
+
+        {# IMPORTANT: If we disable the dropdown (edit_mode), browser won't submit it.
+           So we send document_type via hidden input in edit mode. #}
+        {% if edit_mode and form_data and form_data.document_type %}
+          <input type="hidden" name="document_type" value="{{ form_data.document_type }}">
+        {% endif %}
+
+        <div class="grid2">
+          <div class="field field-sm">
+            <label>Document Type</label>
+            <select name="document_type" {% if edit_mode %}disabled{% endif %}>
+              {% for opt in doc_types %}
+                <option value="{{ opt }}"
+                  {% if form_data and form_data.document_type == opt %}selected{% endif %}>
+                  {{ opt }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Document Number</label>
+            <input
+              type="text"
+              name="document_number"
+              placeholder="Enter document number"
+              value="{{ form_data.document_number if form_data else '' }}"
+              {% if edit_mode %}readonly{% endif %}
+              required
+            >
+          </div>
+
+          <div class="field field-sm">
+            <label>Issuing Country (2 letters)</label>
+            <input
+              type="text"
+              name="issuing_country_iso2"
+              maxlength="2"
+              placeholder="IN"
+              value="{{ form_data.issuing_country_iso2 if form_data else '' }}"
+            >
+          </div>
+
+          <div class="field">
+            <label>First Name (as per document)</label>
+            <input
+              type="text"
+              name="first_name"
+              placeholder="First name on document"
+              value="{{ form_data.first_name if form_data else '' }}"
+            >
+          </div>
+
+          <div class="field">
+            <label>Last Name (as per document)</label>
+            <input
+              type="text"
+              name="last_name"
+              placeholder="Last name on document"
+              value="{{ form_data.last_name if form_data else '' }}"
+            >
+          </div>
+
+          <div class="field field-sm">
+            <label>Issue Date</label>
+            <input
+              type="date"
+              name="issue_date"
+              value="{{ form_data.issue_date if form_data else '' }}"
+            >
+          </div>
+
+          <div class="field">
+            <label>Expiry Date</label>
+            <input
+              type="date"
+              name="expiry_date"
+              value="{{ form_data.expiry_date if form_data else '' }}"
+            >
+          </div>
+        </div>
+
+        <div class="checks">
+          <label class="check">
+            <input
+              type="checkbox"
+              name="is_primary"
+              {% if form_data and form_data.is_primary == 'on' %}checked{% endif %}
+            >
+            Mark as Primary
+          </label>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-primary" type="submit">
+            {% if edit_mode %}Update Document{% else %}Save Document{% endif %}
+          </button>
+
+          {% if edit_mode %}
+            <a class="btn btn-ghost" href="/profile/travel-docs">Cancel</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <div class="card fancy">
+      <div class="card-title">My Saved Documents</div>
+      <div class="card-desc">Manage your stored travel documents.</div>
+      {% if docs and docs|length > 0 %}
+        <div class="doclist">
+          {% for d in docs %}
+            <div class="docrow {% if d.is_active == 0 %}docrow-inactive{% endif %}">
+              <div class="docmain">
+                <div class="doctitle">
+                  {{ d.document_type }}
+                  {% if d.is_primary == 1 %}<span class="pill">Primary</span>{% endif %}
+                  {% if d.is_active == 0 %}<span class="pill pill-muted">Inactive</span>{% endif %}
+                </div>
+                <div class="docmeta">
+                  Number: <b>{{ d.document_number }}</b>
+                  {% if d.issuing_country_iso2 %} | Country: {{ d.issuing_country_iso2 }}{% endif %}
+                  {% if d.first_name or d.last_name %} | Name: {{ (d.first_name or '') }} {{ (d.last_name or '') }}{% endif %}
+                  {% if d.expiry_date %} | Expiry: {{ d.expiry_date }}{% endif %}
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; align-items:center;">
+                {% if d.is_active == 1 %}
+                  <a class="btn btn-ghost" href="/profile/travel-docs?edit_id={{ d.document_id }}">Edit</a>
+
+                  <form method="post" action="/profile/travel-docs/{{ d.document_id }}/deactivate">
+                    <button class="btn btn-ghost" type="submit">Deactivate</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="color:#6b7280; font-size:14px; margin-top:10px;">
+          No documents added yet.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

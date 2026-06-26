@@ -1,0 +1,152 @@
+
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .bk-wrap { max-width: 1100px; margin: 0 auto; }
+  .bk-hero {
+    background: #0a4bb3;
+    color: #fff;
+    border-radius: 20px;
+    padding: 28px;
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .bk-hero-label { font-size: 20px; opacity: .95; text-transform: uppercase; letter-spacing: .08em; }
+  .bk-hero-ref { font-size: 34px; font-weight: 900; margin-top: 8px; line-height: 1.1; }
+  .bk-hero-sub { margin-top: 8px; opacity: .92; }
+  .bk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+  .bk-card { background: #fff; border: 1px solid #d9e1ef; border-radius: 18px; padding: 18px; }
+  .bk-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: .06em; }
+  .bk-value { font-size: 26px; font-weight: 800; margin-top: 8px; line-height: 1.2; }
+  .bk-sub { color: #475569; margin-top: 8px; }
+  .bk-section { margin-top: 20px; background: #fff; border: 1px solid #d9e1ef; border-radius: 18px; padding: 18px; }
+  .bk-section h2 { margin: 0 0 14px; }
+  .bk-segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .bk-seg { border: 1px solid #d9e1ef; border-radius: 16px; padding: 16px; background: #fafcff; }
+  .bk-seg-title { font-weight: 800; font-size: 17px; margin-bottom: 12px; }
+  .bk-trip-grid { display: grid; grid-template-columns: 122px minmax(0, 1fr); gap: 8px 12px; align-items: start; }
+  .bk-trip-k { color: #475569; font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .bk-trip-v { color: #0f172a; font-size: 14px; line-height: 1.45; word-break: break-word; }
+  .bk-pax { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px; }
+  .bk-pax-card { border: 1px solid #d9e1ef; border-radius: 16px; padding: 16px; background: #fafcff; }
+  .bk-pax-name { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+  .bk-pax-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px 14px; }
+  .bk-pax-grid b { display:block; margin-top:4px; word-break: break-word; }
+</style>
+
+{% set pay_status = (booking_view.payment_status or booking_view.confirmed_journey.payment_status or '').upper() %}
+{% set display_booking_status = 'HELD FOR PAYMENT' if pay_status == 'PENDING' else (booking_view.confirmed_journey.status or booking_view.booking_status or '-') %}
+{% set booking_lead_message = 'Your booking is temporarily held pending payment. Please complete payment to confirm your booking.' if pay_status == 'PENDING' else 'Your booking is confirmed. Review the final booking summary below.' %}
+
+<div class="bk-wrap">
+  <div class="bk-hero">
+    <div>
+      <div class="bk-hero-label">Booking Ref #</div>
+      <div class="bk-hero-ref">{{ booking_view.confirmed_journey.booking_ref or booking_ref }}</div>
+      <div class="bk-hero-sub">{{ booking_lead_message }}</div>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="/portal/flight/search">New Search</a>
+      <a class="btn btn-ghost" href="/">Home</a>
+    </div>
+  </div>
+
+  <div class="bk-grid">
+    <div class="bk-card">
+      <div class="bk-label">Status</div>
+      <div class="bk-value">{{ display_booking_status }}</div>
+      <div class="bk-sub">{{ booking_view.confirmed_journey.trip_type or '-' }} · {{ booking_view.confirmed_journey.passenger_count or 0 }} traveller(s)</div>
+    </div>
+    <div class="bk-card">
+      <div class="bk-label">Total amount</div>
+      <div class="bk-value">{{ booking_view.confirmed_journey.total_amount or '-' }} {{ booking_view.confirmed_journey.currency or '' }}</div>
+      <div class="bk-sub">Payment: {{ booking_view.payment_status or booking_view.confirmed_journey.payment_status or 'Pending' }}</div>
+      {% if pay_status == 'PENDING' %}
+        <div style="margin-top:12px;">
+          <a href="/portal/flight/payment?booking_ref={{ booking_view.confirmed_journey.booking_ref }}"
+             class="btn btn-primary"
+             style="display:inline-block; padding:10px 16px; border-radius:10px; background:#0a4bb3; color:#fff; text-decoration:none; font-weight:600;">
+             Proceed to Payment
+          </a>
+        </div>
+      {% else %}
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+          <a href="{{ provider_itinerary_url or ('http://bookmyflight.local:8002/manage-booking?booking_ref=' ~ booking_view.confirmed_journey.booking_ref) }}"
+             target="_blank"
+             rel="noopener"
+             class="btn btn-primary"
+             style="display:inline-block; padding:10px 16px; border-radius:10px; background:#0a4bb3; color:#fff; text-decoration:none; font-weight:600;">
+             View & Download Itinerary
+          </a>
+        </div>
+      {% endif %}
+
+    </div>
+    <div class="bk-card">
+      <div class="bk-label">Contact</div>
+      {% set lead = booking_view.passengers[0] if booking_view.passengers else {} %}
+      <div class="bk-value" style="font-size:20px;">{{ lead.email or '-' }}</div>
+      <div class="bk-sub">{{ lead.phone or '-' }}</div>
+    </div>
+  </div>
+
+  <div class="bk-section">
+    <h2>Your trip</h2>
+    <div class="bk-segments">
+      {% for seg in booking_view.confirmed_journey.segments %}
+      <div class="bk-seg">
+        <div class="bk-seg-title">
+          {% if seg.airline_display %}
+            {{ seg.leg_title or ('Segment ' ~ loop.index) }} · {{ seg.airline_display }}
+          {% elif seg.airline_name and seg.flight_number %}
+            {{ seg.leg_title or ('Segment ' ~ loop.index) }} · {{ seg.airline_name }} {{ seg.flight_number }}
+          {% else %}
+            {{ seg.leg_title or ('Segment ' ~ loop.index) }} · {{ seg.flight_number or '-' }}
+          {% endif %}
+        </div>
+        <div class="bk-trip-grid">
+          <div class="bk-trip-k">Departure</div>
+          <div class="bk-trip-v">- {{ seg.from_airport_display or seg.from_airport_full or seg.from_airport or '-' }}</div>
+
+          <div class="bk-trip-k">Arrival</div>
+          <div class="bk-trip-v">- {{ seg.to_airport_display or seg.to_airport_full or seg.to_airport or '-' }}</div>
+
+          <div class="bk-trip-k">Departure Date</div>
+          <div class="bk-trip-v">: {{ seg.scheduled_departure_display or seg.scheduled_departure or '-' }}</div>
+
+          <div class="bk-trip-k">Arrival Date</div>
+          <div class="bk-trip-v">: {{ seg.scheduled_arrival_display or seg.scheduled_arrival or '-' }}</div>
+
+          <div class="bk-trip-k">Cabin</div>          
+		  <div class="bk-trip-v">: {{ seg.cabin_class or seg.cabin or seg.fare_cabin_class or booking_view.confirmed_journey.cabin_class or '-' }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bk-section">
+    <h2>Travellers</h2>
+    <div class="bk-pax">
+      {% for p in booking_view.passengers %}
+      <div class="bk-pax-card">
+        <div class="bk-pax-name">{{ p.full_name or '-' }}</div>
+        <div class="bk-pax-grid">
+          <div><span class="bk-label">Traveller Type</span><b>{{ p.traveler_type or '-' }}</b></div>
+          <div><span class="bk-label">Gender</span><b>{{ p.gender or '-' }}</b></div>
+          <div><span class="bk-label">Date of Birth</span><b>{{ p.date_of_birth or '-' }}</b></div>
+          <div><span class="bk-label">Nationality</span><b>{{ p.nationality_iso2 or '-' }}</b></div>
+          <div><span class="bk-label">Document</span><b>{{ p.document_type or '-' }} {{ p.document_number or '' }}</b></div>
+          <div><span class="bk-label">Document Expiry</span><b>{{ p.document_expiry or '-' }}</b></div>
+          <div><span class="bk-label">Seat Preference</span><b>{{ p.seat_preference or '-' }}</b></div>
+          <div><span class="bk-label">Meal Preference</span><b>{{ p.meal_preference or '-' }}</b></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set ns = namespace(trip_name='', return_name='') %}
+{% for f in fields %}
+  {% set lbl = (f.label or '')|lower|trim %}
+  {% if lbl == 'trip type' %}
+    {% set ns.trip_name = f.name %}
+  {% elif lbl == 'return date' %}
+    {% set ns.return_name = f.name %}
+  {% endif %}
+{% endfor %}
+
+<style>
+  .fs-page{display:flex;flex-direction:column;gap:18px}
+  .fs-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .fs-header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .fs-title{font-size:26px;font-weight:900;line-height:1.15;color:#0f172a}
+  .fs-subtitle{margin-top:6px;font-size:13px;color:#6b7280}
+  .fs-user{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid rgba(17,24,39,.08);font-size:12px;font-weight:700;color:#374151}
+  .fs-hero{background:#0a4bb3;border-radius:22px;padding:18px;color:#fff;box-shadow:0 10px 25px rgba(10,75,179,.20)}
+  .fs-top-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .fs-left-controls{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+  .fs-radio-group{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .fs-radio{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#fff}
+  .fs-radio input{width:16px;height:16px;accent-color:#fff}
+  .fs-compact{min-width:160px}
+  .fs-compact-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.78);margin-bottom:4px}
+  .fs-compact select{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.25);color:#fff;font-size:15px;font-weight:700;padding:6px 0;outline:none}
+  .fs-compact select option{color:#111827}
+  .fs-travellers{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+  .fs-travellers-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.78);margin-bottom:4px}
+  .fs-travellers-row{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+  .fs-mini{width:64px}
+  .fs-mini label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,.80);margin-bottom:4px;text-align:center}
+  .fs-mini select,.fs-mini input{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.25);color:#fff;font-size:15px;font-weight:800;text-align:center;padding:6px 0;outline:none;min-height:34px}
+  .fs-mini select option{color:#111827}
+  .fs-mini input::placeholder{color:rgba(255,255,255,.65)}
+  .fs-mainbar{display:grid;grid-template-columns:1.15fr 1.15fr 1fr 1fr 170px;gap:0;background:#fff;border:3px solid #febb02;border-radius:16px;overflow:hidden}
+  .fs-cell{min-height:86px;padding:12px 14px;border-right:1px solid rgba(17,24,39,.08);display:flex;flex-direction:column;justify-content:center;background:#fff;transition:all .15s ease}
+  .fs-cell:last-child{border-right:none}
+  .fs-label{font-size:12px;font-weight:700;color:#6b7280;margin-bottom:6px}
+  .fs-input,.fs-select{width:100%;border:none;outline:none;background:transparent;font-size:15px;font-weight:800;color:#111827;padding:0;min-height:28px}
+  .fs-input[type="date"]{font-family:Arial,sans-serif}
+  .fs-help-inline{margin-top:4px;font-size:11px;color:#94a3b8;line-height:1.3}
+  .fs-search-btn{height:100%;width:100%;border:none;background:#0071c2;color:#fff;font-size:18px;font-weight:900;cursor:pointer}
+  .fs-lower{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .fs-card{background:#fff;border:1px solid rgba(17,24,39,.08);border-radius:18px;padding:16px;box-shadow:0 8px 18px rgba(17,24,39,.04)}
+  .fs-card-title{font-size:16px;font-weight:900;color:#111827;margin-bottom:6px}
+  .fs-card-note{font-size:13px;line-height:1.45;color:#6b7280;margin-bottom:12px}
+  .fs-field{margin-top:12px}
+  .fs-field label{display:block;font-size:13px;font-weight:700;color:#111827;margin-bottom:6px}
+  .fs-field select,.fs-field input{width:100%;padding:10px 12px;border:1px solid rgba(17,24,39,.12);border-radius:12px;background:#fff;font-size:14px;color:#111827}
+  .fs-help{margin-top:6px;font-size:11px;line-height:1.35;color:rgba(17,24,39,.55)}
+  .fs-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .fs-disabled-cell{background:#f8fafc}
+  .fs-disabled-cell .fs-label{color:#94a3b8}
+  .fs-disabled-cell .fs-help-inline{color:#cbd5e1}
+  .fs-disabled-cell .fs-input{color:#94a3b8 !important;-webkit-text-fill-color:#94a3b8;cursor:not-allowed}
+  .fs-disabled-cell input[type="date"]::-webkit-calendar-picker-indicator{opacity:.25}
+  @media (max-width:1100px){.fs-mainbar{grid-template-columns:1fr 1fr}.fs-search-btn{min-height:72px}}
+  @media (max-width:760px){.fs-mainbar{grid-template-columns:1fr}.fs-cell{border-right:none;border-bottom:1px solid rgba(17,24,39,.08)}.fs-lower{grid-template-columns:1fr}}
+</style>
+
+<div class="fs-page">
+  <div class="fs-header">
+    <div>
+      <div class="fs-title">Guided Booking • Flight Search</div>
+    </div>
+    <div class="fs-header-actions">
+      <a href="/portal/flight/my-bookings-popup" class="btn secondary" target="_blank" rel="noopener">View My All Booking</a>
+      <div class="fs-user">Signed in as {{ request.state.user_name if request.state and request.state.user_name else "shiva" }}</div>
+    </div>
+  </div>
+
+  <form method="post" action="/portal/flight/search" id="flight-search-form" data-trip-name="{{ ns.trip_name }}" data-return-name="{{ ns.return_name }}">
+    <div class="fs-hero">
+      <div class="fs-top-controls">
+        <div class="fs-left-controls">
+
+          <div class="fs-radio-group" id="trip-type-group">
+            {% for f in fields %}
+              {% if (f.label or '')|lower|trim == 'trip type' %}
+                {% for opt in (f.options or []) %}
+                  {% set ov = opt[0] %}
+                  {% set ol = opt[1] %}
+                  <label class="fs-radio">
+                    <input type="radio" name="{{ f.name }}" value="{{ ov }}"
+                      {% if (f.default_value|string) == (ov|string) %}checked{% endif %}
+                      {% if f.readonly %}disabled{% endif %}>
+                    <span>{{ ol.replace('_','-').title() }}</span>
+                  </label>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <div class="fs-compact">
+            <div class="fs-compact-label">Cabin</div>
+            {% for f in fields %}
+              {% if (f.label or '')|lower|trim == 'cabin class' %}
+                <select id="{{ f.name }}" name="{{ f.name }}" {% if f.required %}required{% endif %} {% if f.readonly %}disabled{% endif %}>
+                  {% for opt in (f.options or []) %}
+                    {% set ov = opt[0] %}
+                    {% set ol = opt[1] %}
+                    <option value="{{ ov }}" {% if (f.default_value|string) == (ov|string) %}selected{% endif %}>{{ ol }}</option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <div class="fs-travellers">
+            <div>
+              <div class="fs-travellers-title">Travellers</div>
+              <div class="fs-travellers-row">
+                {% for f in fields %}
+                  {% set lbl = (f.label or '')|lower|trim %}
+                  {% if lbl in ['adults','children','infants'] %}
+                    <div class="fs-mini">
+                      <label for="{{ f.name }}">{% if lbl == 'adults' %}Adult{% elif lbl == 'children' %}Child{% else %}Infant{% endif %}</label>
+                      {% if f.control == 'SELECT' %}
+                        <select id="{{ f.name }}" name="{{ f.name }}" {% if f.required %}required{% endif %} {% if f.readonly %}disabled{% endif %}>
+                          {% for opt in (f.options or []) %}
+                            {% set ov = opt[0] %}
+                            <option value="{{ ov }}" {% if (f.default_value|string) == (ov|string) %}selected{% endif %}>{{ ov }}</option>
+                          {% endfor %}
+                        </select>
+                      {% else %}
+                        <input id="{{ f.name }}" name="{{ f.name }}" type="number" min="0" max="9"
+                               value="{{ f.default_value or ('1' if lbl=='adults' else '0') }}"
+                               {% if f.required %}required{% endif %} {% if f.readonly %}readonly{% endif %}>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="fs-mainbar">
+        <div class="fs-cell">
+          <div class="fs-label">Leaving from</div>
+          {% for f in fields %}
+            {% if (f.label or '')|lower|trim == 'from airport' %}
+              {% if f.control == 'SELECT' %}
+                <select id="{{ f.name }}" name="{{ f.name }}" class="fs-select" {% if f.required %}required{% endif %} {% if f.readonly %}disabled{% endif %}>
+                  <option value="">-- Select --</option>
+                  {% for opt in (f.options or []) %}
+                    {% set ov = opt[0] %}
+                    {% set ol = opt[1] %}
+                    <option value="{{ ov }}" {% if (f.default_value|string) == (ov|string) %}selected{% endif %}>{{ ol }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input id="{{ f.name }}" name="{{ f.name }}" type="text" class="fs-input" value="{{ f.default_value or '' }}" placeholder="{{ f.placeholder or '' }}" {% if f.required %}required{% endif %} {% if f.readonly %}readonly{% endif %}>
+              {% endif %}
+              {% if f.help_text %}<div class="fs-help-inline">{{ f.help_text }}</div>{% endif %}
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="fs-cell">
+          <div class="fs-label">Going to</div>
+          {% for f in fields %}
+            {% if (f.label or '')|lower|trim == 'to airport' %}
+              {% if f.control == 'SELECT' %}
+                <select id="{{ f.name }}" name="{{ f.name }}" class="fs-select" {% if f.required %}required{% endif %} {% if f.readonly %}disabled{% endif %}>
+                  <option value="">-- Select --</option>
+                  {% for opt in (f.options or []) %}
+                    {% set ov = opt[0] %}
+                    {% set ol = opt[1] %}
+                    <option value="{{ ov }}" {% if (f.default_value|string) == (ov|string) %}selected{% endif %}>{{ ol }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input id="{{ f.name }}" name="{{ f.name }}" type="text" class="fs-input" value="{{ f.default_value or '' }}" placeholder="{{ f.placeholder or '' }}" {% if f.required %}required{% endif %} {% if f.readonly %}readonly{% endif %}>
+              {% endif %}
+              {% if f.help_text %}<div class="fs-help-inline">{{ f.help_text }}</div>{% endif %}
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="fs-cell">
+          <div class="fs-label">Departure date</div>
+          {% for f in fields %}
+            {% if (f.label or '')|lower|trim == 'depart date' %}
+              <input id="{{ f.name }}" name="{{ f.name }}" type="date" class="fs-input" value="{{ f.default_value or '' }}" {% if f.required %}required{% endif %} {% if f.readonly %}readonly{% endif %}>
+              {% if f.help_text %}<div class="fs-help-inline">{{ f.help_text }}</div>{% endif %}
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="fs-cell" id="return-date-cell">
+          <div class="fs-label">Return date</div>
+          {% for f in fields %}
+            {% if (f.label or '')|lower|trim == 'return date' %}
+              <input id="{{ f.name }}" name="{{ f.name }}" type="date" class="fs-input" value="{{ f.default_value or '' }}" data-default-value="{{ f.default_value or '' }}" {% if f.readonly %}readonly{% endif %}>
+              {% if f.help_text %}<div class="fs-help-inline">{{ f.help_text }}</div>{% endif %}
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="fs-cell" style="padding:0;">
+          <button class="fs-search-btn" type="submit">Search</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fs-lower">
+      <div class="fs-card">
+        <div class="fs-card-title">Preferences</div>
+        <div class="fs-card-note">Keep the current cfg-driven logic, but show secondary options in a smaller clean area.</div>
+        {% for f in fields %}
+          {% set lbl = (f.label or '')|lower|trim %}
+          {% if lbl in ['preferred airline', 'currency'] %}
+            <div class="fs-field">
+              <label for="{{ f.name }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+              {% if f.control == 'SELECT' %}
+                <select id="{{ f.name }}" name="{{ f.name }}" {% if f.required %}required{% endif %} {% if f.readonly %}disabled{% endif %}>
+                  <option value="">-- Select --</option>
+                  {% for opt in (f.options or []) %}
+                    {% set ov = opt[0] %}
+                    {% set ol = opt[1] %}
+                    <option value="{{ ov }}" {% if (f.default_value|string) == (ov|string) %}selected{% endif %}>{{ ol }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input id="{{ f.name }}" name="{{ f.name }}" type="text" value="{{ f.default_value or '' }}" placeholder="{{ f.placeholder or '' }}" {% if f.required %}required{% endif %} {% if f.readonly %}readonly{% endif %}>
+              {% endif %}
+              {% if f.help_text %}<div class="fs-help">{{ f.help_text }}</div>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="fs-card">
+        <div class="fs-card-title">Search Options</div>
+        <div class="fs-card-note">Advanced filters remain available without crowding the main search bar.</div>
+        {% for f in fields %}
+          {% set lbl = (f.label or '')|lower|trim %}
+          {% if lbl in ['top n result', 'include +/- days'] %}
+            <div class="fs-field">
+              <label for="{{ f.name }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+              {% if f.control == 'NUMBER' %}
+                <input id="{{ f.name }}" name="{{ f.name }}" type="number" value="{{ f.default_value or '' }}" {% if f.required %}required{% endif %} {% if f.readonly %}readonly{% endif %}>
+              {% elif f.control == 'SELECT' %}
+                <select id="{{ f.name }}" name="{{ f.name }}" {% if f.required %}required{% endif %} {% if f.readonly %}disabled{% endif %}>
+                  <option value="">-- Select --</option>
+                  {% for opt in (f.options or []) %}
+                    {% set ov = opt[0] %}
+                    {% set ol = opt[1] %}
+                    <option value="{{ ov }}" {% if (f.default_value|string) == (ov|string) %}selected{% endif %}>{{ ol }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input id="{{ f.name }}" name="{{ f.name }}" type="text" value="{{ f.default_value or '' }}" placeholder="{{ f.placeholder or '' }}" {% if f.required %}required{% endif %} {% if f.readonly %}readonly{% endif %}>
+              {% endif %}
+              {% if f.help_text %}<div class="fs-help">{{ f.help_text }}</div>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+        <div class="fs-actions">
+          <button class="btn" type="submit">Search Flights</button>
+          <a class="btn btn-ghost" href="/">Back</a>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if popup_message %}
+<script>
+window.addEventListener("load", function(){
+  showPopup("Message", "{{ popup_message|e }}");
+});
+</script>
+{% endif %}
+
+<script>
+(function () {
+  function getForm() {
+    return document.getElementById("flight-search-form");
+  }
+  function getTripTypeName() {
+    const form = getForm();
+    return form ? form.dataset.tripName : "";
+  }
+  function getReturnName() {
+    const form = getForm();
+    return form ? form.dataset.returnName : "";
+  }
+  function getTripTypeValue() {
+    const tripName = getTripTypeName();
+    if (!tripName) return "ONE_WAY";
+    const checked = document.querySelector('input[name="' + tripName + '"]:checked');
+    if (checked) return checked.value;
+    const select = document.querySelector('select[name="' + tripName + '"]');
+    if (select) return select.value;
+    return "ONE_WAY";
+  }
+  function getReturnInput() {
+    const returnName = getReturnName();
+    if (!returnName) return null;
+    return document.getElementById(returnName) || document.querySelector('input[name="' + returnName + '"]');
+  }
+  function updateReturnDateState() {
+    const tripType = getTripTypeValue();
+    const returnCell = document.getElementById("return-date-cell");
+    const returnInput = getReturnInput();
+    if (!returnCell || !returnInput) return;
+
+    const defaultValue = returnInput.dataset.defaultValue || "";
+    const storedValue = returnInput.dataset.lastRoundTripValue || returnInput.value || defaultValue;
+
+    if (tripType === "ROUND_TRIP") {
+      returnInput.disabled = false;
+      returnInput.required = true;
+      returnInput.readOnly = false;
+      if (!returnInput.value) {
+        returnInput.value = storedValue || defaultValue;
+      }
+      returnCell.classList.remove("fs-disabled-cell");
+    } else {
+      if (returnInput.value) {
+        returnInput.dataset.lastRoundTripValue = returnInput.value;
+      }
+      returnInput.value = "";
+      returnInput.disabled = true;
+      returnInput.required = false;
+      returnInput.readOnly = true;
+      returnCell.classList.add("fs-disabled-cell");
+    }
+  }
+  function bindTripTypeEvents() {
+    const tripName = getTripTypeName();
+    if (!tripName) return;
+    document.querySelectorAll('input[name="' + tripName + '"]').forEach(function(el){
+      el.addEventListener("change", updateReturnDateState);
+      el.addEventListener("click", updateReturnDateState);
+    });
+    const tripSelect = document.querySelector('select[name="' + tripName + '"]');
+    if (tripSelect) {
+      tripSelect.addEventListener("change", updateReturnDateState);
+      tripSelect.addEventListener("input", updateReturnDateState);
+    }
+  }
+  document.addEventListener("DOMContentLoaded", function(){
+    bindTripTypeEvents();
+    updateReturnDateState();
+    setTimeout(updateReturnDateState, 100);
+  });
+})();
+</script>
+
+{% endblock %}
+

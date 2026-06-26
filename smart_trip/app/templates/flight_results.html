@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="top">
+  <div>
+    <div class="h1">Smart Trip </div>
+    <div class="h1">Guided Booking • Flight Results</div>
+  </div>
+  <div class="pill">Signed in as {{ request.state.user_name if request.state and request.state.user_name else "shiva" }}</div>
+</div>
+
+<div class="card fr-wide-shell" style="padding:18px; border-radius:18px;">
+
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+    <div>
+      <div class="h2" style="font-size:20px; font-weight:800;">Flight Results</div>
+      <div class="muted" style="margin-top:4px;"><span id="js-total-count">Found {{ result_count }} flight(s).</span><span id="js-filtered-count"></span></div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="/portal/flight/search">Modify Search</a>
+      <a class="btn btn-ghost" href="/">Back</a>
+    </div>
+  </div>
+
+  {% if search_payload %}
+    {% set s = (search_payload.get("search") or {}) %}
+    <div style="margin:12px 0 16px; padding:12px 14px; border:1px solid rgba(17,24,39,0.08); border-radius:16px; background:#f8fafc;">
+      <div class="muted" style="font-size:12px; margin-bottom:8px; font-weight:700;">Search Summary</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <span style="padding:7px 11px; border-radius:999px; border:1px solid rgba(17,24,39,0.08); background:#fff; font-size:13px;"><span class="muted">From:</span> <b>{{ s.get("from_airport","") }}</b></span>
+        <span style="padding:7px 11px; border-radius:999px; border:1px solid rgba(17,24,39,0.08); background:#fff; font-size:13px;"><span class="muted">To:</span> <b>{{ s.get("to_airport","") }}</b></span>
+        <span style="padding:7px 11px; border-radius:999px; border:1px solid rgba(17,24,39,0.08); background:#fff; font-size:13px;"><span class="muted">Trip Type:</span> <b>{{ s.get("trip_type", "ONE_WAY") }}</b></span>
+        <span style="padding:7px 11px; border-radius:999px; border:1px solid rgba(17,24,39,0.08); background:#fff; font-size:13px;"><span class="muted">Depart:</span> <b><span class="js-format-date" data-raw="{{ s.get('depart_date','') }}">{{ s.get("depart_date","") }}</span></b></span>
+        {% if s.get("trip_type") == "ROUND_TRIP" and s.get("return_date") %}
+        <span style="padding:7px 11px; border-radius:999px; border:1px solid rgba(17,24,39,0.08); background:#fff; font-size:13px;"><span class="muted">Return:</span> <b><span class="js-format-date" data-raw="{{ s.get('return_date','') }}">{{ s.get("return_date","") }}</span></b></span>
+        {% endif %}
+        <span style="padding:7px 11px; border-radius:999px; border:1px solid rgba(17,24,39,0.08); background:#fff; font-size:13px;"><span class="muted">Cabin:</span> <b>{{ s.get("cabin_class","") }}</b></span>
+        <span style="padding:7px 11px; border-radius:999px; border:1px solid rgba(17,24,39,0.08); background:#fff; font-size:13px;"><span class="muted">Currency:</span> <b>{{ s.get("currency","") }}</b></span>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="fr-layout">
+    <aside class="fr-filter-panel">
+      <div class="fr-filter-title">Filter Results</div>
+
+      <label class="fr-filter-label" for="fltStops">Stops</label>
+      <input id="fltStops" class="fr-filter-input fr-filter-input-stop" type="text" inputmode="numeric" maxlength="1" placeholder="e.g 0">
+
+      <div class="fr-filter-label" style="margin-top:12px;">Airline</div>
+      <div id="fltAirlines" class="fr-airline-list"></div>
+
+      <label class="fr-filter-label" for="fltMinPrice" style="margin-top:12px;">Min Price</label>
+      <input id="fltMinPrice" class="fr-filter-input fr-filter-input-price" type="text" inputmode="numeric" maxlength="8" placeholder="e.g 30000">
+
+      <label class="fr-filter-label" for="fltMaxPrice" style="margin-top:12px;">Max Price</label>
+      <input id="fltMaxPrice" class="fr-filter-input fr-filter-input-price" type="text" inputmode="numeric" maxlength="8" placeholder="e.g 45000">
+
+      <div class="fr-filter-actions">
+        <button type="button" class="btn btn-sm" id="fltApplyBtn">Apply</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="fltResetBtn">Reset</button>
+      </div>
+    </aside>
+
+    <div class="fr-results-pane">
+
+  {% if trip_type == 'ROUND_TRIP' %}
+
+    {% if (round_trip_cards|length) == 0 %}
+      <div style="padding:18px; border:1px solid rgba(17,24,39,0.08); border-radius:16px; background:#fff;">
+        <span class="muted">No round-trip journeys found for your search.</span>
+      </div>
+    {% endif %}
+
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      {% for c in round_trip_cards %}
+        {% set out = c.outbound or {} %}
+        {% set ret = c.return or {} %}
+        {% set out_air = out.get('airline') or {} %}
+        {% set ret_air = ret.get('airline') or {} %}
+        {% set out_route = out.get('route') or {} %}
+        {% set ret_route = ret.get('route') or {} %}
+        {% set out_from = out_route.get('from') or {} %}
+        {% set out_to = out_route.get('to') or {} %}
+        {% set ret_from = ret_route.get('from') or {} %}
+        {% set ret_to = ret_route.get('to') or {} %}
+        {% set out_sched = out.get('schedule') or {} %}
+        {% set ret_sched = ret.get('schedule') or {} %}
+        {% set out_stops = out.get('stops') or {} %}
+        {% set ret_stops = ret.get('stops') or {} %}
+        {% set out_via = '' %}
+        {% if out_stops.get('layover1_airport_code') %}{% set out_via = 'Via ' ~ out_stops.get('layover1_airport_code') ~ ((' layover ' ~ out_stops.get('layover1_min') ~ ' min') if out_stops.get('layover1_min') else '') %}{% endif %}
+        {% set ret_via = '' %}
+        {% if ret_stops.get('layover1_airport_code') %}{% set ret_via = 'Via ' ~ ret_stops.get('layover1_airport_code') ~ ((' layover ' ~ ret_stops.get('layover1_min') ~ ' min') if ret_stops.get('layover1_min') else '') %}{% endif %}
+        {% set low = c.lowest_total_price or {} %}
+        <div class="js-flight-card" data-stop-count="{{ c.get('__filter_stop_count__', 0) }}" data-airlines="{{ (c.get('__filter_airlines__') or [])|join('|')|lower }}" data-price="{{ c.get('__filter_price__', 0) }}" style="border:1px solid rgba(17,24,39,0.08); border-radius:16px; background:#f8fafc; overflow:hidden;">
+          <div style="padding:14px 14px 12px;">
+            <div style="display:grid; grid-template-columns:minmax(0,1.08fr) minmax(0,1.08fr) 200px; gap:8px; align-items:stretch;">
+              <div style="border:1px solid rgba(17,24,39,0.08); border-radius:14px; padding:12px; background:#fcfcff; min-width:0;">
+                <div class="muted" style="font-size:11px; font-weight:700; margin-bottom:8px;">Outbound</div>
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                  <div>
+                    <div style="font-size:15px; font-weight:800;">{{ out_air.get('name') or 'Airline' }}</div>
+                    <div class="muted" style="font-size:12px; margin-top:1px;">{{ out.get('flight_number') or '' }}</div>
+                  </div>
+                  
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:10px; margin-top:10px; flex-wrap:nowrap; min-width:0;">
+                  <div style="min-width:68px;">
+                    <div style="font-size:16px; font-weight:800; line-height:1.1;">{{ out_from.get('airport') or '' }}</div>
+                    <div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;"><span class="js-format-datetime" data-raw="{{ out_sched.get('scheduled_departure_display') or out_sched.get('scheduled_departure_formatted') or out_sched.get('scheduled_departure') or '' }}">{{ out_sched.get('scheduled_departure_display') or out_sched.get('scheduled_departure_formatted') or out_sched.get('scheduled_departure') or '' }}</span></div>
+                  </div>
+                  <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-width:88px; flex:1 1 auto;">
+                    <div style="width:100%; max-width:88px; height:2px; background:#cbd5e1; position:relative; margin-top:10px;"><span style="position:absolute; left:-2px; top:-5px; width:10px; height:10px; border:2px solid #64748b; border-radius:50%; background:#fff;"></span><span style="position:absolute; right:-2px; top:-5px; width:10px; height:10px; border:2px solid #64748b; border-radius:50%; background:#fff;"></span><span style="position:absolute; left:50%; transform:translateX(-50%); top:-15px; font-size:11px; color:#64748b;">✈</span></div>
+                    <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:2px 8px; font-size:11px; font-weight:700; margin-bottom:8px; line-height:1.1;">{{ out_stops.get('stops_formatted') or 'NON-STOP' }}</div>
+                    <div class="muted" style="font-size:12px; text-align:center; margin-top:6px;">{{ out.get('duration_formatted') or '' }}</div>
+                    {% if out_via %}<div style="font-size:13px; font-weight:700; text-align:center; margin-top:6px;">{{ out_via }}</div>{% endif %}
+                  </div>
+                  <div style="min-width:68px; text-align:right;">
+                    <div style="font-size:16px; font-weight:800; line-height:1.1;">{{ out_to.get('airport') or '' }}</div>
+                    <div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;"><span class="js-format-datetime" data-raw="{{ out_sched.get('scheduled_arrival_display') or out_sched.get('scheduled_arrival_formatted') or out_sched.get('scheduled_arrival') or '' }}">{{ out_sched.get('scheduled_arrival_display') or out_sched.get('scheduled_arrival_formatted') or out_sched.get('scheduled_arrival') or '' }}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="border:1px solid rgba(17,24,39,0.08); border-radius:14px; padding:12px; background:#fcfcff; min-width:0;">
+                <div class="muted" style="font-size:11px; font-weight:700; margin-bottom:8px;">Return</div>
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                  <div>
+                    <div style="font-size:15px; font-weight:800;">{{ ret_air.get('name') or 'Airline' }}</div>
+                    <div class="muted" style="font-size:12px; margin-top:1px;">{{ ret.get('flight_number') or '' }}</div>
+                  </div>
+                 
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:10px; margin-top:10px; flex-wrap:nowrap; min-width:0;">
+                  <div style="min-width:68px;">
+                    <div style="font-size:16px; font-weight:800; line-height:1.1;">{{ ret_from.get('airport') or '' }}</div>
+                    <div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;"><span class="js-format-datetime" data-raw="{{ ret_sched.get('scheduled_departure_display') or ret_sched.get('scheduled_departure_formatted') or ret_sched.get('scheduled_departure') or '' }}">{{ ret_sched.get('scheduled_departure_display') or ret_sched.get('scheduled_departure_formatted') or ret_sched.get('scheduled_departure') or '' }}</span></div>
+                  </div>
+                  <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-width:88px; flex:1 1 auto;">
+                    <div style="width:100%; max-width:88px; height:2px; background:#cbd5e1; position:relative; margin-top:10px;"><span style="position:absolute; left:-2px; top:-5px; width:10px; height:10px; border:2px solid #64748b; border-radius:50%; background:#fff;"></span><span style="position:absolute; right:-2px; top:-5px; width:10px; height:10px; border:2px solid #64748b; border-radius:50%; background:#fff;"></span><span style="position:absolute; left:50%; transform:translateX(-50%); top:-15px; font-size:11px; color:#64748b;">✈</span></div>
+                    <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:2px 8px; font-size:11px; font-weight:700; margin-bottom:8px; line-height:1.1;">{{ ret_stops.get('stops_formatted') or 'NON-STOP' }}</div>
+                    <div class="muted" style="font-size:12px; text-align:center; margin-top:6px;">{{ ret.get('duration_formatted') or '' }}</div>
+                    {% if ret_via %}<div style="font-size:13px; font-weight:700; text-align:center; margin-top:6px;">{{ ret_via }}</div>{% endif %}
+                  </div>
+                  <div style="min-width:68px; text-align:right;">
+                    <div style="font-size:16px; font-weight:800; line-height:1.1;">{{ ret_to.get('airport') or '' }}</div>
+                    <div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;"><span class="js-format-datetime" data-raw="{{ ret_sched.get('scheduled_arrival_display') or ret_sched.get('scheduled_arrival_formatted') or ret_sched.get('scheduled_arrival') or '' }}">{{ ret_sched.get('scheduled_arrival_display') or ret_sched.get('scheduled_arrival_formatted') or ret_sched.get('scheduled_arrival') or '' }}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="border:1px solid rgba(17,24,39,0.08); border-radius:14px; padding:12px; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:stretch; gap:10px;">
+                <div style="text-align:right;">
+                  <div class="muted" style="font-size:11px; margin-bottom:3px;">From</div>
+                  <div style="font-size:20px; font-weight:800; line-height:1.05;">{{ low.get('total') }}</div>
+                  <div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;">{{ low.get('currency') }}</div>
+                </div>
+                {% if c.booked %}
+                  <div style="display:flex; flex-direction:column; gap:7px; width:100%;">
+                    <a class="btn btn-sm" href="/portal/flight/booking-summary?booking_ref={{ c.booking_ref }}" style="width:100%; text-align:center; display:inline-block;">Manage Booking</a>
+                    <a class="btn btn-ghost btn-sm" href="{{ c.provider_portal_url or ('http://bookmyflight.local:8002/manage-booking?booking_ref=' ~ c.booking_ref) }}" target="_blank" rel="noopener" style="width:100%; text-align:center; display:inline-block;">Airline Portal</a>
+                  </div>
+                {% else %}
+                  <form method="get" action="/portal/flight/confirm" style="margin:0; width:100%;">
+                    <input type="hidden" name="agent_fsr_id" value="{{ c.agent_fsr_id }}">
+                    <button class="btn btn-sm" type="submit" style="width:100%;">Book Now</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+
+    {% if (result_rows|length) == 0 %}
+      <div style="padding:18px; border:1px solid rgba(17,24,39,0.08); border-radius:16px; background:#fff;">
+        <span class="muted">No flights found for your search.</span>
+      </div>
+    {% endif %}
+
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      {% for r in result_rows %}
+        {% set ns = namespace(flight_no='', airline='', from_airport='', to_airport='', departure='', arrival='', total='', currency='', refundable='', changeable='') %}
+        {% set ow_stops = r.get('__stops_formatted__') or 'NON-STOP' %}
+        {% set ow_status = r.get('__status__') or 'Scheduled' %}
+        {% set ow_duration = r.get('__duration_formatted__') or '' %}
+        {% set ow_via = r.get('__via_text__') or '' %}
+        {% for c in result_cols %}
+          {% set lbl = (c.label or '')|lower|trim %}
+          {% set val = r.get((c.cfg_id|string), '') %}
+          {% if lbl == 'flight no' %}
+            {% set ns.flight_no = val %}
+          {% elif lbl == 'airline' %}
+            {% set ns.airline = val %}
+          {% elif lbl == 'from' %}
+            {% set ns.from_airport = val %}
+          {% elif lbl == 'to' %}
+            {% set ns.to_airport = val %}
+          {% elif lbl == 'departure' %}
+            {% set ns.departure = val %}
+          {% elif lbl == 'arrival' %}
+            {% set ns.arrival = val %}
+          {% elif lbl == 'total' %}
+            {% set ns.total = val %}
+          {% elif lbl == 'currency' %}
+            {% set ns.currency = val %}
+          {% elif lbl == 'refundable' %}
+            {% set ns.refundable = val %}
+          {% elif lbl == 'changeable' %}
+            {% set ns.changeable = val %}
+          {% endif %}
+        {% endfor %}
+        <div class="js-flight-card" data-stop-count="{{ r.get('__stop_count__', 0) }}" data-airlines="{{ (r.get('__airline_name__') or '')|lower }}" data-price="{{ r.get('__price_total__', 0) }}" style="border:1px solid rgba(17,24,39,0.08); border-radius:16px; background:#f8fafc; overflow:hidden;">
+          <div style="display:grid; grid-template-columns:minmax(0,1fr) 200px; gap:10px; align-items:stretch; padding:14px;">
+            <div style="border:1px solid rgba(17,24,39,0.08); border-radius:14px; padding:12px; background:#fcfcff; min-width:0;">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                <div>
+                  <div style="font-size:15px; font-weight:800;">{{ ns.airline or 'Airline' }}</div>
+                  <div class="muted" style="font-size:12px; margin-top:1px;">{{ ns.flight_no or 'Flight' }}</div>
+                </div>
+                <div class="muted" style="font-size:11px; text-align:right;">{{ ow_stops }} / {{ ow_status }}</div>
+              </div>
+              <div style="display:flex; align-items:flex-start; gap:10px; margin-top:10px; flex-wrap:nowrap; min-width:0;">
+                <div style="min-width:68px;"><div style="font-size:16px; font-weight:800; line-height:1.1;">{{ ns.from_airport }}</div><div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;"><span class="js-format-datetime" data-raw="{{ ns.departure }}">{{ ns.departure }}</span></div></div>
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-width:88px; flex:1 1 auto;"><div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:2px 8px; font-size:11px; font-weight:700; margin-bottom:8px; line-height:1.1;">{{ ow_stops }}</div><div style="width:100%; max-width:88px; height:2px; background:#cbd5e1; position:relative; margin-top:10px;"><span style="position:absolute; left:-2px; top:-5px; width:10px; height:10px; border:2px solid #64748b; border-radius:50%; background:#fff;"></span><span style="position:absolute; right:-2px; top:-5px; width:10px; height:10px; border:2px solid #64748b; border-radius:50%; background:#fff;"></span><span style="position:absolute; left:50%; transform:translateX(-50%); top:-15px; font-size:11px; color:#64748b;">✈</span></div><div class="muted" style="font-size:12px; text-align:center; margin-top:8px;">{{ ow_duration }}</div>{% if ow_via %}<div style="font-size:10px; font-weight:700; text-align:center; margin-top:6px;">{{ ow_via }}</div>{% endif %}</div>
+                <div style="min-width:68px; text-align:right;"><div style="font-size:16px; font-weight:800; line-height:1.1;">{{ ns.to_airport }}</div><div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;"><span class="js-format-datetime" data-raw="{{ ns.arrival }}">{{ ns.arrival }}</span></div></div>
+              </div>
+             
+            </div>
+            <div style="border:1px solid rgba(17,24,39,0.08); border-radius:14px; padding:12px; background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:stretch; gap:10px;">
+              <div style="text-align:right;"><div class="muted" style="font-size:11px; margin-bottom:3px;">From</div><div style="font-size:20px; font-weight:800; line-height:1.05;">{{ ns.total }}</div><div class="muted" style="font-size:11px; margin-top:3px; line-height:1.2;">{{ ns.currency }}</div></div>
+              {% if r.get('__booked__') %}
+                <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                  <a class="btn btn-sm" href="/portal/flight/booking-summary?booking_ref={{ r.get('__booking_ref__','') }}" style="width:100%; text-align:center; display:inline-block;">Manage Booking</a>
+                  <a class="btn btn-ghost btn-sm" href="{{ r.get('__provider_portal_url__') or ('http://bookmyflight.local:8002/manage-booking?booking_ref=' ~ r.get('__booking_ref__','')) }}" target="_blank" rel="noopener" style="width:100%; text-align:center; display:inline-block;">Airline Portal</a>
+                </div>
+              {% else %}
+                <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                  <form method="get" action="/portal/flight/confirm" onsubmit="return confirm('Proceed with booking this flight?');" style="margin:0; width:100%;"><input type="hidden" name="agent_fsr_id" value="{{ r.get('__fsr_id__', '') }}"><button class="btn btn-sm" type="submit" style="width:100%;">Book Now</button></form>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% endif %}
+
+</div>
+  </div>
+</div>
+
+<style>
+.fr-wide-shell { width:min(1100px, calc(100vw - 40px)); max-width:min(1100px, calc(100vw - 40px)); margin:0 auto; box-sizing:border-box; }
+.fr-layout { display:flex; gap:12px; align-items:flex-start; }
+.fr-filter-panel { width:170px; min-width:170px; background:#fff; border:1px solid rgba(17,24,39,0.08); border-radius:16px; padding:12px; position:sticky; top:12px; }
+.fr-filter-title { font-size:15px; font-weight:800; margin-bottom:8px; }
+.fr-filter-label { display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:5px; }
+.fr-filter-input { width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:8px 9px; font-size:13px; box-sizing:border-box; }
+.fr-filter-input-stop { width:50px; max-width:50px; min-width:50px; text-align:center; padding-left:4px; padding-right:4px; }
+.fr-filter-input-price { width:86px; max-width:86px; min-width:86px; }
+.fr-airline-list { display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto; padding:2px 0; }
+.fr-airline-item { display:flex; align-items:center; gap:6px; font-size:13px; }
+.fr-filter-actions { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+.fr-results-pane { flex:1 1 auto; min-width:0; width:calc(100% - 182px); }
+@media (max-width: 1100px) {\n  .fr-wide-shell { width:100%; max-width:100%; margin:0 auto; }\n  .fr-layout { flex-direction:column; }\n  .fr-filter-panel { width:100%; min-width:0; position:static; }\n  .fr-filter-input-stop, .fr-filter-input-price { width:100%; max-width:100%; min-width:0; }
+  div[style*="grid-template-columns:minmax(0,1fr) minmax(0,1fr) 150px"] {
+    grid-template-columns: 1fr !important;
+  }
+  div[style*="grid-template-columns:minmax(0,1fr) 165px"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
+
+
+<script>
+(function () {
+  const cards = Array.from(document.querySelectorAll('.js-flight-card'));
+  const stopsInput = document.getElementById('fltStops');
+  const minInput = document.getElementById('fltMinPrice');
+  const maxInput = document.getElementById('fltMaxPrice');
+  const applyBtn = document.getElementById('fltApplyBtn');
+  const resetBtn = document.getElementById('fltResetBtn');
+  const airlinesBox = document.getElementById('fltAirlines');
+  const totalCountEl = document.getElementById('js-total-count');
+  const filteredCountEl = document.getElementById('js-filtered-count');
+  if (!cards.length || !airlinesBox) return;
+
+  const airlineSet = new Set();
+  cards.forEach(card => {
+    const raw = (card.dataset.airlines || '').split('|').map(v => v.trim()).filter(Boolean);
+    raw.forEach(a => airlineSet.add(a));
+  });
+  const airlineList = Array.from(airlineSet).sort((a,b) => a.localeCompare(b));
+  airlinesBox.innerHTML = airlineList.map(a => {
+    const label = a.replace(/\b\w/g, ch => ch.toUpperCase());
+    return `<label class="fr-airline-item"><input type="checkbox" class="js-airline-filter" value="${a}"> <span>${label}</span></label>`;
+  }).join('');
+
+  function parseNumber(value) {
+    const s = String(value || '').replace(/,/g, '').trim();
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function applyFilters() {
+    const stopVal = (stopsInput.value || '').trim();
+    const stopNum = stopVal === '' ? null : parseInt(stopVal, 10);
+    const minPrice = parseNumber(minInput.value);
+    const maxPrice = parseNumber(maxInput.value);
+    const selectedAirlines = new Set(Array.from(document.querySelectorAll('.js-airline-filter:checked')).map(el => el.value));
+    let shown = 0;
+
+    cards.forEach(card => {
+      const stopCount = parseInt(card.dataset.stopCount || '0', 10);
+      const price = parseNumber(card.dataset.price) || 0;
+      const airlines = new Set((card.dataset.airlines || '').split('|').map(v => v.trim()).filter(Boolean));
+      let ok = true;
+      if (stopNum !== null && !Number.isNaN(stopNum) && stopCount !== stopNum) ok = false;
+      if (ok && selectedAirlines.size) {
+        let matched = false;
+        selectedAirlines.forEach(a => { if (airlines.has(a)) matched = true; });
+        if (!matched) ok = false;
+      }
+      if (ok && minPrice !== null && price < minPrice) ok = false;
+      if (ok && maxPrice !== null && price > maxPrice) ok = false;
+      card.style.display = ok ? '' : 'none';
+      if (ok) shown += 1;
+    });
+
+    if (filteredCountEl) {
+      filteredCountEl.textContent = shown === cards.length ? '' : ` Showing ${shown} after filters.`;
+    }
+  }
+
+  function bindAutoApplyEvents() {
+    [stopsInput, minInput, maxInput].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener('change', applyFilters);
+      el.addEventListener('input', applyFilters);
+    });
+    document.querySelectorAll('.js-airline-filter').forEach(function (el) {
+      el.addEventListener('change', applyFilters);
+      el.addEventListener('click', applyFilters);
+    });
+  }
+
+  bindAutoApplyEvents();
+  applyFilters();
+
+  applyBtn && applyBtn.addEventListener('click', applyFilters);
+  resetBtn && resetBtn.addEventListener('click', function () {
+    stopsInput.value = '';
+    minInput.value = '';
+    maxInput.value = '';
+    document.querySelectorAll('.js-airline-filter').forEach(el => el.checked = false);
+    applyFilters();
+  });
+})();
+</script>
+
+
+<script>
+function _fmtDateDisplay(raw, withTime) {
+  if (!raw) return raw;
+  const s = String(raw).trim();
+  if (!s || s === '-') return s;
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::\d{2})?)?$/);
+  if (!m) return s;
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  const hh = m[4] || '00', mm = m[5] || '00';
+  const dt = new Date(y, mo - 1, d, Number(hh), Number(mm));
+  if (Number.isNaN(dt.getTime())) return s;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dd = String(dt.getDate()).padStart(2, '0');
+  const yy = String(dt.getFullYear()).slice(-2);
+  let out = `${days[dt.getDay()]}, ${mons[dt.getMonth()]} ${dd} ${yy}`;
+  if (withTime) out += ` ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  return out;
+}
+window.addEventListener('load', function(){
+  document.querySelectorAll('.js-format-date').forEach(function(el){
+    el.textContent = _fmtDateDisplay(el.dataset.raw || el.textContent, false);
+  });
+  document.querySelectorAll('.js-format-datetime').forEach(function(el){
+    el.textContent = _fmtDateDisplay(el.dataset.raw || el.textContent, true);
+  });
+});
+</script>
+
+{% endblock %}
