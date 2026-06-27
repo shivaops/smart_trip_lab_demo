@@ -4,9 +4,17 @@ Smart Trip is an AI-assisted airline booking demo project created for learning, 
 
 This project was built using AI assistance along with developer review and correction. The purpose is to demonstrate how an idea can be quickly converted into a working application, while also showing that AI-generated code still requires developer review, testing, correction, validation, and improvement.
 
-## Note:
- I did not manually write or correct even a single line of application code. All source code uploaded here was written by AI.
- The main agenda of Smart Trip is to show that even when AI generates the code, the developer’s role is still extremely important.
+## Note
+
+I did not manually write or correct even a single line of application code. All source code, SQL scripts, setup scripts, and related files uploaded in this repository were generated with AI assistance.
+
+The main agenda of Smart Trip is to show that even when AI generates the code, the developer’s role is still extremely important.
+
+This does not mean AI cannot write proper code or correct its own mistakes. AI is very powerful when it is guided with clear requirements, proper prompts, business flow explanation, and step-by-step feedback. With the right guidance, AI can produce better results in fewer attempts and much faster.
+
+At the same time, developers must learn how to use AI effectively. This includes understanding how to explain requirements clearly, how to review generated output, how to test business scenarios, how to identify gaps, and how to improve the solution through better prompts or manual judgement.
+
+For beginners and new learners, this project is a practical example of how AI-assisted development can be used in real application flow. It also shows why learning software development fundamentals, business logic, testing, and basic AI/ML/DL concepts can help you use AI tools more effectively.
 
 Learners can use this project to practice:
 
