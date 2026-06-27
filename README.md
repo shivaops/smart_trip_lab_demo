@@ -4,7 +4,7 @@ Smart Trip is an AI-assisted airline booking demo project created for learning, 
 
 This project was built using AI assistance along with developer review and correction. The purpose is to demonstrate how an idea can be quickly converted into a working application, while also showing that AI-generated code still requires developer review, testing, correction, validation, and improvement.
 
-# NOTE:
+## Note:
  I did not manually write or correct even a single line of application code. All source code uploaded here was written by AI.
  The main agenda of Smart Trip is to show that even when AI generates the code, the developer’s role is still extremely important.
 
